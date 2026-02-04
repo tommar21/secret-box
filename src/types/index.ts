@@ -48,10 +48,12 @@ export interface VaultState {
   cryptoKey: CryptoKey | null;
   projects: DecryptedProject[];
   globalVariables: DecryptedGlobalVariable[];
+  autoLockMinutes: number;
 
   // Actions
   unlock: (masterPassword: string, salt: string) => Promise<void>;
   lock: () => void;
+  setAutoLockMinutes: (minutes: number) => void;
   setProjects: (projects: DecryptedProject[]) => void;
   setGlobalVariables: (globals: DecryptedGlobalVariable[]) => void;
   addProject: (project: DecryptedProject) => void;

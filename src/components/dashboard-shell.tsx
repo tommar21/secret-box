@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Lock, LogOut, Settings, FolderKey, Key, LockOpen } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Lock, LogOut, Settings, FolderKey, Key, LockOpen, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VaultProvider } from "./vault-provider";
 import { useVaultStore } from "@/stores/vault-store";
 import { signOut } from "next-auth/react";
+import { cn } from "@/lib/utils";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -16,45 +19,110 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ children, user }: DashboardShellProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="flex min-h-screen">
+      {/* Mobile header */}
+      <div className="fixed left-0 right-0 top-0 z-40 flex h-14 items-center gap-4 border-b bg-background px-4 md:hidden">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <div className="flex items-center gap-2">
+          <Lock className="h-5 w-5" />
+          <span className="font-bold">EnvVault</span>
+        </div>
+      </div>
+
+      {/* Overlay for mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <Sidebar user={user} />
+      <Sidebar
+        user={user}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto pt-14 md:pt-0">
         <VaultProvider>
-          <div className="container mx-auto p-6">{children}</div>
+          <div className="container mx-auto p-4 md:p-6">{children}</div>
         </VaultProvider>
       </main>
     </div>
   );
 }
 
-function Sidebar({ user }: { user: { name?: string | null; email?: string | null } }) {
+function Sidebar({
+  user,
+  isOpen,
+  onClose,
+}: {
+  user: { name?: string | null; email?: string | null };
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const pathname = usePathname();
   const isUnlocked = useVaultStore((state) => state.isUnlocked);
   const lock = useVaultStore((state) => state.lock);
 
   return (
-    <aside className="w-64 border-r bg-muted/30">
+    <aside
+      className={cn(
+        "fixed inset-y-0 left-0 z-50 w-64 border-r bg-background transition-transform md:static md:translate-x-0",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}
+    >
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2 border-b px-4">
-          <Lock className="h-6 w-6" />
-          <span className="text-xl font-bold">EnvVault</span>
+        <div className="flex h-14 items-center justify-between gap-2 border-b px-4 md:h-16">
+          <div className="flex items-center gap-2">
+            <Lock className="h-6 w-6" />
+            <span className="text-xl font-bold">EnvVault</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={onClose}
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 p-4">
-          <NavLink href="/dashboard" icon={<FolderKey className="h-4 w-4" />}>
+          <NavLink
+            href="/dashboard"
+            icon={<FolderKey className="h-4 w-4" />}
+            isActive={pathname === "/dashboard"}
+            onClick={onClose}
+          >
             Projects
           </NavLink>
-          <NavLink href="/dashboard/globals" icon={<Key className="h-4 w-4" />}>
+          <NavLink
+            href="/dashboard/globals"
+            icon={<Key className="h-4 w-4" />}
+            isActive={pathname === "/dashboard/globals"}
+            onClick={onClose}
+          >
             Global Variables
           </NavLink>
           <NavLink
             href="/dashboard/settings"
             icon={<Settings className="h-4 w-4" />}
+            isActive={pathname === "/dashboard/settings"}
+            onClick={onClose}
           >
             Settings
           </NavLink>
@@ -78,8 +146,8 @@ function Sidebar({ user }: { user: { name?: string | null; email?: string | null
         {/* User */}
         <div className="border-t p-4">
           <div className="flex items-center justify-between">
-            <div className="truncate">
-              <p className="text-sm font-medium">{user.name}</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{user.name}</p>
               <p className="truncate text-xs text-muted-foreground">
                 {user.email}
               </p>
@@ -102,15 +170,25 @@ function NavLink({
   href,
   icon,
   children,
+  isActive,
+  onClick,
 }: {
   href: string;
   icon: React.ReactNode;
   children: React.ReactNode;
+  isActive?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+        isActive
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      )}
     >
       {icon}
       {children}

@@ -13,6 +13,14 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   cryptoKey: null,
   projects: [],
   globalVariables: [],
+  autoLockMinutes: 5,
+
+  // Set auto-lock timeout
+  setAutoLockMinutes: (minutes: number) => {
+    set({ autoLockMinutes: minutes });
+    // Reset timer with new duration
+    resetInactivityTimer();
+  },
 
   // Unlock the vault with master password
   unlock: async (masterPassword: string, salt: string) => {
@@ -94,9 +102,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   },
 }));
 
-// Auto-lock after inactivity (5 minutes)
+// Auto-lock after inactivity
 let inactivityTimer: NodeJS.Timeout | null = null;
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
 export function resetInactivityTimer() {
   if (inactivityTimer) {
@@ -105,9 +112,10 @@ export function resetInactivityTimer() {
 
   const state = useVaultStore.getState();
   if (state.isUnlocked) {
+    const timeout = state.autoLockMinutes * 60 * 1000;
     inactivityTimer = setTimeout(() => {
       useVaultStore.getState().lock();
-    }, INACTIVITY_TIMEOUT);
+    }, timeout);
   }
 }
 
