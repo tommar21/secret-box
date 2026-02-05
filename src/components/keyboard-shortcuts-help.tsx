@@ -11,7 +11,7 @@ import {
 
 const shortcuts = [
   { keys: ["⌘", "K"], description: "Open search" },
-  { keys: ["⌘", "N"], description: "New project" },
+  { keys: ["⇧", "⌘", "P"], description: "New project" },
   { keys: ["⌘", "L"], description: "Lock vault" },
   { keys: ["?"], description: "Show this help" },
   { keys: ["Esc"], description: "Close dialogs" },
@@ -19,8 +19,22 @@ const shortcuts = [
 
 export function KeyboardShortcutsHelp() {
   const [open, setOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Check if it's a touch device or small screen
+    const checkMobile = () => {
+      setIsMobile(window.matchMedia("(max-width: 768px)").matches || "ontouchstart" in window);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    // Don't register keyboard shortcuts on mobile
+    if (isMobile) return;
+
     const down = (e: KeyboardEvent) => {
       // ? key (with or without shift, accounting for different keyboard layouts)
       if (e.key === "?" || (e.shiftKey && e.key === "/")) {
@@ -38,7 +52,10 @@ export function KeyboardShortcutsHelp() {
 
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
-  }, []);
+  }, [isMobile]);
+
+  // Don't render on mobile
+  if (isMobile) return null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

@@ -47,7 +47,7 @@ import {
 import { useVaultStore } from "@/stores/vault-store";
 import { encryptVariable, decryptVariable } from "@/lib/crypto/encryption";
 import { createVariable, deleteVariable, updateVariable } from "@/lib/actions/variables";
-import { deleteProject } from "@/lib/actions/projects";
+import { deleteProject, createEnvironment, deleteEnvironment } from "@/lib/actions/projects";
 import { ImportEnvDialog } from "@/components/import-env-dialog";
 import { useConfirm } from "@/hooks/use-confirm";
 import { toast } from "sonner";
@@ -112,13 +112,15 @@ export function ProjectView({ project }: ProjectViewProps) {
   // Load variables when tab changes
   function handleTabChange(envId: string) {
     setActiveEnv(envId);
-    decryptEnvVariables(envId);
   }
 
-  // Initialize first tab
-  if (activeEnv && !decryptedVars[activeEnv] && cryptoKey) {
-    decryptEnvVariables(activeEnv);
-  }
+  // Initialize decryption when activeEnv or cryptoKey changes
+  useEffect(() => {
+    if (activeEnv && !decryptedVars[activeEnv] && cryptoKey) {
+      decryptEnvVariables(activeEnv);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeEnv, cryptoKey]);
 
   async function handleDeleteProject() {
     const confirmed = await confirm({
@@ -229,7 +231,7 @@ export function ProjectView({ project }: ProjectViewProps) {
   return (
     <div>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <Link
             href="/dashboard"
@@ -238,7 +240,7 @@ export function ProjectView({ project }: ProjectViewProps) {
             <ArrowLeft className="h-4 w-4" />
             Back to projects
           </Link>
-          <h1 className="text-3xl font-bold">{project.name}</h1>
+          <h1 className="text-2xl font-bold md:text-3xl">{project.name}</h1>
           {project.path && (
             <p className="text-sm text-muted-foreground">{project.path}</p>
           )}
@@ -267,14 +269,20 @@ export function ProjectView({ project }: ProjectViewProps) {
 
       {/* Environment Tabs */}
       <Tabs value={activeEnv} onValueChange={handleTabChange}>
-        <div className="mb-4 flex items-center justify-between">
-          <TabsList>
-            {project.environments.map((env) => (
-              <TabsTrigger key={env.id} value={env.id}>
-                {env.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <TabsList>
+              {project.environments.map((env) => (
+                <TabsTrigger key={env.id} value={env.id}>
+                  {env.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            <AddEnvironmentDialog
+              projectId={project.id}
+              onSuccess={() => router.refresh()}
+            />
+          </div>
           <div className="flex items-center gap-2">
             <ImportEnvDialog
               environmentId={activeEnv}
@@ -306,15 +314,26 @@ export function ProjectView({ project }: ProjectViewProps) {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{env.name}</CardTitle>
-                    <CardDescription>
-                      {decryptedVars[env.id]?.length || 0} variables
-                    </CardDescription>
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <CardTitle className="text-lg">{env.name}</CardTitle>
+                      <CardDescription>
+                        {decryptedVars[env.id]?.length || 0} variables
+                      </CardDescription>
+                    </div>
+                    {/* Delete Environment - only show if more than 1 environment */}
+                    {project.environments.length > 1 && (
+                      <DeleteEnvironmentButton
+                        environmentId={env.id}
+                        environmentName={env.name}
+                        variableCount={decryptedVars[env.id]?.length || 0}
+                        onSuccess={() => router.refresh()}
+                      />
+                    )}
                   </div>
                   {/* Bulk Actions Bar */}
                   {decryptedVars[env.id]?.length > 0 && (
-                    <div className="flex items-center gap-2">
+                    <div className="hidden items-center gap-2 md:flex">
                       {selectedVars.size > 0 ? (
                         <>
                           <span className="text-sm text-muted-foreground">
@@ -441,16 +460,17 @@ const VariableRow = memo(function VariableRow({
   return (
     <>
       <div
-        className={`group flex items-center gap-4 rounded-lg border p-3 transition-all duration-200 hover:shadow-sm ${
+        className={`group flex flex-col gap-2 rounded-lg border p-3 transition-all duration-200 hover:shadow-sm md:flex-row md:items-center md:gap-4 ${
           isSelected
             ? "border-primary bg-primary/5 shadow-sm"
             : "hover:border-primary/30 hover:bg-muted/50"
         }`}
       >
+        {/* Selection checkbox - hidden on mobile */}
         <Button
           variant="ghost"
           size="icon"
-          className="shrink-0 transition-transform hover:scale-110"
+          className="hidden shrink-0 transition-transform hover:scale-110 md:flex"
           onClick={onToggleSelection}
         >
           {isSelected ? (
@@ -459,25 +479,31 @@ const VariableRow = memo(function VariableRow({
             <Square className="h-4 w-4 opacity-50 group-hover:opacity-100" />
           )}
         </Button>
-        <div className="min-w-0 flex-1">
-          <code className="rounded bg-muted/50 px-2 py-1 text-sm font-semibold">{variable.key}</code>
+
+        {/* Key and Value - stack on mobile, side by side on desktop */}
+        <div className="flex flex-1 flex-col gap-1 md:flex-row md:items-center md:gap-4">
+          <div className="min-w-0 md:flex-1">
+            <code className="rounded bg-muted/50 px-2 py-1 text-sm font-semibold">{variable.key}</code>
+          </div>
+          <div className="min-w-0 md:flex-1">
+            <code className="text-sm text-muted-foreground font-mono break-all">
+              {variable.isSecret && !isVisible
+                ? "••••••••••••"
+                : isVisible || !variable.isSecret
+                ? variable.value
+                : "••••••••••••"}
+            </code>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <code className="text-sm text-muted-foreground font-mono">
-            {variable.isSecret && !isVisible
-              ? "••••••••••••"
-              : isVisible || !variable.isSecret
-              ? variable.value
-              : "••••••••••••"}
-          </code>
-        </div>
-        <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-70 md:group-hover:opacity-100 transition-opacity">
           {variable.isSecret && (
             <Button
               variant="ghost"
               size="icon"
               onClick={onToggleVisibility}
-              className="hover:bg-primary/10 hover:text-primary"
+              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
             >
               {isVisible ? (
                 <EyeOff className="h-4 w-4" />
@@ -490,7 +516,7 @@ const VariableRow = memo(function VariableRow({
             variant="ghost"
             size="icon"
             onClick={onCopy}
-            className={`transition-all ${isCopied ? "text-green-500" : "hover:bg-primary/10 hover:text-primary"}`}
+            className={`h-8 w-8 transition-all ${isCopied ? "text-green-500" : "hover:bg-primary/10 hover:text-primary"}`}
           >
             {isCopied ? (
               <Check className="h-4 w-4 animate-in zoom-in-50" />
@@ -502,7 +528,7 @@ const VariableRow = memo(function VariableRow({
             variant="ghost"
             size="icon"
             onClick={() => setIsEditing(true)}
-            className="hover:bg-primary/10 hover:text-primary"
+            className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -510,7 +536,7 @@ const VariableRow = memo(function VariableRow({
             variant="ghost"
             size="icon"
             onClick={onDelete}
-            className="hover:bg-destructive/10 hover:text-destructive"
+            className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -812,3 +838,145 @@ const ExportButton = memo(function ExportButton({
     </Button>
   );
 });
+
+const AddEnvironmentDialog = memo(function AddEnvironmentDialog({
+  projectId,
+  onSuccess,
+}: {
+  projectId: string;
+  onSuccess: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [name, setName] = useState("");
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      // Validate name (lowercase, no spaces)
+      const cleanName = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      if (!cleanName) {
+        toast.error("Please enter a valid environment name");
+        setIsLoading(false);
+        return;
+      }
+
+      await createEnvironment(projectId, cleanName);
+      toast.success("Environment created");
+      setOpen(false);
+      setName("");
+      onSuccess();
+    } catch (error) {
+      logger.error("Failed to create environment", error);
+      toast.error("Failed to create environment");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Plus className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Environment</DialogTitle>
+          <DialogDescription>
+            Create a new environment for this project (e.g., qa, demo, preview).
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="env-name" className="text-sm font-medium">
+                Environment Name
+              </label>
+              <Input
+                id="env-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="qa"
+                required
+                disabled={isLoading}
+              />
+              <p className="text-xs text-muted-foreground">
+                Use lowercase letters, numbers, and hyphens only.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading || !name.trim()}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Create Environment
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+});
+
+function DeleteEnvironmentButton({
+  environmentId,
+  environmentName,
+  variableCount,
+  onSuccess,
+}: {
+  environmentId: string;
+  environmentName: string;
+  variableCount: number;
+  onSuccess: () => void;
+}) {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { confirm, ConfirmDialog } = useConfirm();
+
+  async function handleDelete() {
+    const confirmed = await confirm({
+      title: "Delete Environment",
+      description: `Are you sure you want to delete "${environmentName}"?${variableCount > 0 ? ` This will also delete ${variableCount} variable${variableCount > 1 ? "s" : ""}.` : ""} This action cannot be undone.`,
+      confirmText: "Delete",
+      variant: "destructive",
+    });
+
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteEnvironment(environmentId);
+      toast.success("Environment deleted");
+      onSuccess();
+    } catch (error) {
+      logger.error("Failed to delete environment", error);
+      toast.error("Failed to delete environment");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+        onClick={handleDelete}
+        disabled={isDeleting}
+      >
+        {isDeleting ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <Trash2 className="h-3 w-3" />
+        )}
+      </Button>
+      <ConfirmDialog />
+    </>
+  );
+}

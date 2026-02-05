@@ -170,7 +170,7 @@ const Sidebar = memo(function Sidebar({
             >
               <LockOpen className="h-4 w-4 text-green-500" />
               <span className="text-green-600 dark:text-green-400">Vault Unlocked</span>
-              <kbd className="ml-auto rounded border bg-muted px-1.5 py-0.5 text-[10px] font-mono">⌘L</kbd>
+              <kbd className="ml-auto hidden rounded border bg-muted px-1.5 py-0.5 text-[10px] font-mono md:inline-block">⌘L</kbd>
             </Button>
           </div>
         )}

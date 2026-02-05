@@ -44,8 +44,8 @@ export function SearchCommand({ projects = [] }: SearchCommandProps) {
         lock();
       }
 
-      // Cmd+N for new project
-      if (e.key === "n" && (e.metaKey || e.ctrlKey)) {
+      // Cmd+Shift+P for new project (avoiding Ctrl+N which opens new browser window)
+      if (e.key === "p" && (e.metaKey || e.ctrlKey) && e.shiftKey) {
         e.preventDefault();
         router.push("/dashboard/projects/new");
       }
@@ -84,12 +84,12 @@ export function SearchCommand({ projects = [] }: SearchCommandProps) {
             >
               <Plus className="mr-2 h-4 w-4" />
               New Project
-              <kbd className="ml-auto text-xs text-muted-foreground">⌘N</kbd>
+              <kbd className="ml-auto hidden text-xs text-muted-foreground md:inline">⇧⌘P</kbd>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => lock())}>
               <Lock className="mr-2 h-4 w-4" />
               Lock Vault
-              <kbd className="ml-auto text-xs text-muted-foreground">⌘L</kbd>
+              <kbd className="ml-auto hidden text-xs text-muted-foreground md:inline">⌘L</kbd>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => router.push("/dashboard/settings"))}

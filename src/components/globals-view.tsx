@@ -208,9 +208,9 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Global Variables</h1>
+          <h1 className="text-2xl font-bold md:text-3xl">Global Variables</h1>
           <p className="text-muted-foreground">
             Variables shared across all your projects
           </p>
@@ -296,16 +296,17 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
               {decryptedGlobals.map((variable) => (
                 <div
                   key={variable.id}
-                  className={`group flex items-center gap-4 rounded-lg border p-3 transition-all duration-200 hover:shadow-sm ${
+                  className={`group flex flex-col gap-2 rounded-lg border p-3 transition-all duration-200 hover:shadow-sm md:flex-row md:items-center md:gap-4 ${
                     selectedVars.has(variable.id)
                       ? "border-primary bg-primary/5 shadow-sm"
                       : "hover:border-primary/30 hover:bg-muted/50"
                   }`}
                 >
+                  {/* Selection checkbox - hidden on mobile */}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="shrink-0 transition-transform hover:scale-110"
+                    className="hidden shrink-0 transition-transform hover:scale-110 md:flex"
                     onClick={() => toggleSelection(variable.id)}
                   >
                     {selectedVars.has(variable.id) ? (
@@ -314,28 +315,34 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
                       <Square className="h-4 w-4 opacity-50 group-hover:opacity-100" />
                     )}
                   </Button>
-                  <div className="min-w-0 flex-1">
-                    <code className="rounded bg-muted/50 px-2 py-1 text-sm font-semibold">{variable.key}</code>
-                    {variable.linkedProjects.length > 0 && (
-                      <p className="mt-1.5 text-xs text-muted-foreground">
-                        <span className="font-medium">Used in:</span> {variable.linkedProjects.join(", ")}
-                      </p>
-                    )}
+
+                  {/* Key and Value - stack on mobile */}
+                  <div className="flex flex-1 flex-col gap-1 md:flex-row md:items-center md:gap-4">
+                    <div className="min-w-0 md:flex-1">
+                      <code className="rounded bg-muted/50 px-2 py-1 text-sm font-semibold">{variable.key}</code>
+                      {variable.linkedProjects.length > 0 && (
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          <span className="font-medium">Used in:</span> {variable.linkedProjects.join(", ")}
+                        </p>
+                      )}
+                    </div>
+                    <div className="min-w-0 md:flex-1">
+                      <code className="text-sm text-muted-foreground font-mono break-all">
+                        {variable.isSecret && !visibleValues.has(variable.id)
+                          ? "••••••••••••"
+                          : variable.value}
+                      </code>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <code className="text-sm text-muted-foreground font-mono">
-                      {variable.isSecret && !visibleValues.has(variable.id)
-                        ? "••••••••••••"
-                        : variable.value}
-                    </code>
-                  </div>
-                  <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-70 md:group-hover:opacity-100 transition-opacity">
                     {variable.isSecret && (
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => toggleValueVisibility(variable.id)}
-                        className="hover:bg-primary/10 hover:text-primary"
+                        className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
                       >
                         {visibleValues.has(variable.id) ? (
                           <EyeOff className="h-4 w-4" />
@@ -348,7 +355,7 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
                       variant="ghost"
                       size="icon"
                       onClick={() => copyToClipboard(variable.value, variable.id)}
-                      className={`transition-all ${copiedId === variable.id ? "text-green-500" : "hover:bg-primary/10 hover:text-primary"}`}
+                      className={`h-8 w-8 transition-all ${copiedId === variable.id ? "text-green-500" : "hover:bg-primary/10 hover:text-primary"}`}
                     >
                       {copiedId === variable.id ? (
                         <Check className="h-4 w-4 animate-in zoom-in-50" />
@@ -360,7 +367,7 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
                       variant="ghost"
                       size="icon"
                       onClick={() => setEditingVar(variable)}
-                      className="hover:bg-primary/10 hover:text-primary"
+                      className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -368,7 +375,7 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDelete(variable.id)}
-                      className="hover:bg-destructive/10 hover:text-destructive"
+                      className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

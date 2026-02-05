@@ -46,9 +46,9 @@ export default function TeamsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Teams</h1>
+          <h1 className="text-2xl font-bold md:text-3xl">Teams</h1>
           <p className="text-muted-foreground">
             Collaborate on projects with your team
           </p>
@@ -93,7 +93,7 @@ export default function TeamsPage() {
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <CardDescription>
-                    Owned by {team.owner.name || team.owner.email}
+                    Owned by {team.owner?.name || team.owner?.email || "Unknown"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
