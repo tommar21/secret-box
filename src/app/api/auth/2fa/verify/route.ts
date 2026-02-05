@@ -6,6 +6,7 @@ import { verifyTOTPCode, generateBackupCodes, formatBackupCode } from "@/lib/tot
 import { logAudit } from "@/lib/audit";
 import { totpCodeSchema, validateInput } from "@/lib/validation/schemas";
 import { hashBackupCode } from "@/lib/backup-codes";
+import { decryptServerSide } from "@/lib/crypto/server-encryption";
 
 export async function POST(req: Request) {
   try {
@@ -44,8 +45,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Verify the code
-    const isValid = await verifyTOTPCode(code, user.twoFactorSecret);
+    // Decrypt the secret and verify the code
+    const decryptedSecret = decryptServerSide(user.twoFactorSecret);
+    const isValid = await verifyTOTPCode(code, decryptedSecret);
 
     if (!isValid) {
       return NextResponse.json(

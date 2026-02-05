@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,6 +29,16 @@ export function TwoFactorSetup({ isEnabled, onSuccess }: TwoFactorSetupProps) {
   const [secret, setSecret] = useState<string | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   async function handleSetup() {
     setIsLoading(true);
@@ -94,10 +104,13 @@ export function TwoFactorSetup({ isEnabled, onSuccess }: TwoFactorSetupProps) {
 
   function copySecret() {
     if (secret) {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
       navigator.clipboard.writeText(secret);
       setCopied(true);
       toast.success("Secret copied to clipboard");
-      setTimeout(() => setCopied(false), 2000);
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
     }
   }
 

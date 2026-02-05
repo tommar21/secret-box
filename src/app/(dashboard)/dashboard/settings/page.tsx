@@ -51,20 +51,29 @@ export default function SettingsPage() {
 
   // Fetch 2FA status on mount
   useEffect(() => {
+    const controller = new AbortController();
+
     async function fetchStatus() {
       try {
-        const res = await fetch("/api/user/status");
+        const res = await fetch("/api/user/status", { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
           setTwoFactorEnabled(data.twoFactorEnabled ?? false);
         }
-      } catch {
-        // Silently fail - will show as disabled
+      } catch (err) {
+        // Silently fail unless it's not an abort
+        if (err instanceof Error && err.name !== "AbortError") {
+          // Could log error if needed
+        }
       } finally {
-        setIsLoadingStatus(false);
+        if (!controller.signal.aborted) {
+          setIsLoadingStatus(false);
+        }
       }
     }
     fetchStatus();
+
+    return () => controller.abort();
   }, []);
 
   function handleAutoLockChange() {

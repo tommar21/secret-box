@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, memo, useCallback } from "react";
+import { useState, useEffect, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -40,6 +40,8 @@ import {
   updateGlobalVariable,
 } from "@/lib/actions/variables";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useToggleSet } from "@/hooks/use-toggle-set";
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import type { GlobalVariable, ProjectGlobal, Project } from "@prisma/client";
@@ -63,12 +65,15 @@ interface DecryptedGlobal {
 export function GlobalsView({ globals }: GlobalsViewProps) {
   const cryptoKey = useVaultStore((state) => state.cryptoKey);
   const [decryptedGlobals, setDecryptedGlobals] = useState<DecryptedGlobal[]>([]);
-  const [visibleValues, setVisibleValues] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedVars, setSelectedVars] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [editingVar, setEditingVar] = useState<DecryptedGlobal | null>(null);
   const { confirm, ConfirmDialog } = useConfirm();
+
+  // Custom hooks for toggle and copy functionality
+  const visibleValues = useToggleSet<string>();
+  const selectedVars = useToggleSet<string>();
+  const clipboard = useCopyToClipboard();
 
   // Decrypt globals on mount
   useEffect(() => {
@@ -109,31 +114,6 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
     decryptAll();
   }, [cryptoKey, globals]);
 
-  function toggleValueVisibility(varId: string) {
-    setVisibleValues((prev) => {
-      const next = new Set(prev);
-      if (next.has(varId)) {
-        next.delete(varId);
-      } else {
-        next.add(varId);
-      }
-      return next;
-    });
-  }
-
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-
-  const copyToClipboard = useCallback((value: string, id: string) => {
-    navigator.clipboard
-      .writeText(value)
-      .then(() => {
-        setCopiedId(id);
-        toast.success("Copied to clipboard");
-        setTimeout(() => setCopiedId(null), 2000);
-      })
-      .catch(() => toast.error("Failed to copy to clipboard"));
-  }, []);
-
   async function handleDelete(id: string) {
     const confirmed = await confirm({
       title: "Delete Global Variable",
@@ -153,32 +133,13 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
     }
   }
 
-  function toggleSelection(varId: string) {
-    setSelectedVars((prev) => {
-      const next = new Set(prev);
-      if (next.has(varId)) {
-        next.delete(varId);
-      } else {
-        next.add(varId);
-      }
-      return next;
-    });
-  }
-
-  function selectAll() {
-    setSelectedVars(new Set(decryptedGlobals.map((v) => v.id)));
-  }
-
-  function clearSelection() {
-    setSelectedVars(new Set());
-  }
-
   async function handleBulkDelete() {
     if (selectedVars.size === 0) return;
 
+    const count = selectedVars.size;
     const confirmed = await confirm({
       title: "Delete Global Variables",
-      description: `Delete ${selectedVars.size} global variable${selectedVars.size > 1 ? "s" : ""}? They will be unlinked from all projects.`,
+      description: `Delete ${count} global variable${count > 1 ? "s" : ""}? They will be unlinked from all projects.`,
       confirmText: "Delete",
       variant: "destructive",
     });
@@ -188,11 +149,11 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
     setIsBulkDeleting(true);
     try {
       await Promise.all(
-        Array.from(selectedVars).map((id) => deleteGlobalVariable(id))
+        Array.from(selectedVars.set).map((id) => deleteGlobalVariable(id))
       );
       setDecryptedGlobals((prev) => prev.filter((g) => !selectedVars.has(g.id)));
-      setSelectedVars(new Set());
-      toast.success(`Deleted ${selectedVars.size} variable${selectedVars.size > 1 ? "s" : ""}`);
+      selectedVars.clear();
+      toast.success(`Deleted ${count} variable${count > 1 ? "s" : ""}`);
     } catch {
       toast.error("Failed to delete some variables");
     } finally {
@@ -267,7 +228,7 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
                     <span className="text-sm text-muted-foreground">
                       {selectedVars.size} selected
                     </span>
-                    <Button variant="outline" size="sm" onClick={clearSelection}>
+                    <Button variant="outline" size="sm" onClick={selectedVars.clear}>
                       Clear
                     </Button>
                     <Button
@@ -283,7 +244,7 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
                     </Button>
                   </>
                 ) : (
-                  <Button variant="ghost" size="sm" onClick={selectAll}>
+                  <Button variant="ghost" size="sm" onClick={() => selectedVars.selectAll(decryptedGlobals.map(v => v.id))}>
                     <CheckSquare className="mr-2 h-4 w-4" />
                     Select All
                   </Button>
@@ -307,7 +268,7 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
                     variant="ghost"
                     size="icon"
                     className="hidden shrink-0 transition-transform hover:scale-110 md:flex"
-                    onClick={() => toggleSelection(variable.id)}
+                    onClick={() => selectedVars.toggle(variable.id)}
                   >
                     {selectedVars.has(variable.id) ? (
                       <CheckSquare className="h-4 w-4 text-primary" />
@@ -341,7 +302,7 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => toggleValueVisibility(variable.id)}
+                        onClick={() => visibleValues.toggle(variable.id)}
                         className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
                       >
                         {visibleValues.has(variable.id) ? (
@@ -354,10 +315,10 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => copyToClipboard(variable.value, variable.id)}
-                      className={`h-8 w-8 transition-all ${copiedId === variable.id ? "text-green-500" : "hover:bg-primary/10 hover:text-primary"}`}
+                      onClick={() => clipboard.copy(variable.value, variable.id)}
+                      className={`h-8 w-8 transition-all ${clipboard.isCopied(variable.id) ? "text-green-500" : "hover:bg-primary/10 hover:text-primary"}`}
                     >
-                      {copiedId === variable.id ? (
+                      {clipboard.isCopied(variable.id) ? (
                         <Check className="h-4 w-4 animate-in zoom-in-50" />
                       ) : (
                         <Copy className="h-4 w-4" />

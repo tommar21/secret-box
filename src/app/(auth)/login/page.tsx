@@ -7,10 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle } from "lucide-react";
+import { motion } from "framer-motion";
+
+const fadeIn = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.1, duration: 0.4, ease: "easeOut" as const }
+  })
+};
+
+const shakeAnimation = {
+  shake: {
+    x: [0, -10, 10, -10, 10, 0],
+    transition: { duration: 0.5 }
+  }
+};
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [shake, setShake] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -22,56 +40,113 @@ export default function LoginPage() {
     const password = formData.get("password") as string;
 
     try {
-      // Use redirectTo to let NextAuth handle the redirect server-side
-      // This avoids the race condition between client and server redirects
+      // First, validate credentials with rate limiting
+      const validateRes = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const validateData = await validateRes.json();
+
+      if (!validateRes.ok) {
+        setError(validateData.error || "Invalid email or password");
+        setShake(true);
+        setTimeout(() => setShake(false), 500);
+        setIsLoading(false);
+        return;
+      }
+
+      // If credentials are valid, proceed with NextAuth signIn
       await signIn("credentials", {
         email,
         password,
         redirectTo: "/dashboard",
       });
     } catch {
-      // If we reach here, there was an error (auth failed or network issue)
       setError("Invalid email or password");
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
       setIsLoading(false);
     }
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      className="space-y-6"
+      initial="hidden"
+      animate="visible"
+      variants={{
+        hidden: { opacity: 0 },
+        visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+      }}
+    >
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+      <motion.div className="space-y-2" variants={fadeIn} custom={0}>
+        <motion.h1
+          className="text-2xl font-bold tracking-tight md:text-3xl"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           Welcome back
-        </h1>
-        <p className="text-muted-foreground">
+        </motion.h1>
+        <motion.p
+          className="text-muted-foreground"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
           Sign in to access your vault
-        </p>
-      </div>
+        </motion.p>
+      </motion.div>
 
       {/* Error message */}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+        <motion.div
+          className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={shake ? "shake" : { opacity: 1, scale: 1 }}
+          variants={shakeAnimation}
+        >
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{error}</span>
-        </div>
+        </motion.div>
       )}
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
+      <motion.form
+        onSubmit={handleSubmit}
+        className="space-y-4"
+        variants={fadeIn}
+        custom={1}
+      >
+        <motion.div
+          className="space-y-2"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="you@example.com"
-            required
-            disabled={isLoading}
-            className="h-11"
-          />
-        </div>
+          <motion.div whileFocus={{ scale: 1.01 }}>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="you@example.com"
+              required
+              disabled={isLoading}
+              className="h-11 transition-shadow focus:shadow-md"
+            />
+          </motion.div>
+        </motion.div>
 
-        <div className="space-y-2">
+        <motion.div
+          className="space-y-2"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
           </div>
@@ -81,36 +156,58 @@ export default function LoginPage() {
             type="password"
             required
             disabled={isLoading}
-            className="h-11"
+            className="h-11 transition-shadow focus:shadow-md"
           />
-        </div>
+        </motion.div>
 
-        <Button
-          type="submit"
-          className="h-11 w-full gradient-primary border-0 text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30"
-          disabled={isLoading}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
         >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Signing in...
-            </>
-          ) : (
-            "Sign in"
-          )}
-        </Button>
-      </form>
+          <Button
+            type="submit"
+            className="h-11 w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <motion.span
+                className="flex items-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
+              </motion.span>
+            ) : (
+              "Sign in"
+            )}
+          </Button>
+        </motion.div>
+      </motion.form>
 
       {/* Footer */}
-      <p className="text-center text-sm text-muted-foreground">
+      <motion.p
+        className="text-center text-sm text-muted-foreground"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+      >
         Don&apos;t have an account?{" "}
-        <Link
-          href="/register"
-          className="font-medium text-primary underline-offset-4 hover:underline"
+        <motion.span
+          whileHover={{ color: "hsl(var(--primary))" }}
+          className="inline-block"
         >
-          Create one
-        </Link>
-      </p>
-    </div>
+          <Link
+            href="/register"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Create one
+          </Link>
+        </motion.span>
+      </motion.p>
+    </motion.div>
   );
 }

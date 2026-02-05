@@ -42,6 +42,8 @@ import { EditVariableDialog } from "@/components/dialogs/edit-variable-dialog";
 import { AddVariableDialog } from "@/components/dialogs/add-variable-dialog";
 import { AddEnvironmentDialog } from "@/components/dialogs/add-environment-dialog";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useToggleSet } from "@/hooks/use-toggle-set";
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import type { DecryptedVar, ProjectWithRelations } from "@/types/variables";
@@ -55,11 +57,14 @@ export function ProjectView({ project }: ProjectViewProps) {
   const cryptoKey = useVaultStore((state) => state.cryptoKey);
   const [activeEnv, setActiveEnv] = useState(project.environments[0]?.id || "");
   const [decryptedVars, setDecryptedVars] = useState<Record<string, DecryptedVar[]>>({});
-  const [visibleValues, setVisibleValues] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
-  const [selectedVars, setSelectedVars] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const { confirm, ConfirmDialog } = useConfirm();
+
+  // Use custom hooks for toggle sets and clipboard
+  const visibleValues = useToggleSet<string>();
+  const selectedVars = useToggleSet<string>();
+  const clipboard = useCopyToClipboard();
 
   // Decrypt variables for an environment - memoized to prevent unnecessary re-renders
   const decryptEnvVariables = useCallback(
@@ -127,51 +132,11 @@ export function ProjectView({ project }: ProjectViewProps) {
     }
   }
 
-  function toggleValueVisibility(varId: string) {
-    setVisibleValues((prev) => {
-      const next = new Set(prev);
-      if (next.has(varId)) {
-        next.delete(varId);
-      } else {
-        next.add(varId);
-      }
-      return next;
-    });
-  }
-
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-
-  const copyToClipboard = useCallback((value: string, id: string) => {
-    navigator.clipboard
-      .writeText(value)
-      .then(() => {
-        setCopiedId(id);
-        toast.success("Copied to clipboard");
-        setTimeout(() => setCopiedId(null), 2000);
-      })
-      .catch(() => toast.error("Failed to copy to clipboard"));
-  }, []);
-
-  function toggleSelection(varId: string) {
-    setSelectedVars((prev) => {
-      const next = new Set(prev);
-      if (next.has(varId)) {
-        next.delete(varId);
-      } else {
-        next.add(varId);
-      }
-      return next;
-    });
-  }
-
-  function selectAll() {
+  // Helper functions using the hooks
+  const selectAllVars = useCallback(() => {
     const currentVars = decryptedVars[activeEnv] || [];
-    setSelectedVars(new Set(currentVars.map((v) => v.id)));
-  }
-
-  function clearSelection() {
-    setSelectedVars(new Set());
-  }
+    selectedVars.selectAll(currentVars.map((variable) => variable.id));
+  }, [decryptedVars, activeEnv, selectedVars]);
 
   async function handleBulkDelete() {
     if (selectedVars.size === 0) return;
@@ -188,13 +153,13 @@ export function ProjectView({ project }: ProjectViewProps) {
     setIsBulkDeleting(true);
     try {
       await Promise.all(
-        Array.from(selectedVars).map((id) => deleteVariable(id))
+        Array.from(selectedVars.set).map((id) => deleteVariable(id))
       );
       setDecryptedVars((prev) => ({
         ...prev,
-        [activeEnv]: prev[activeEnv].filter((v) => !selectedVars.has(v.id)),
+        [activeEnv]: prev[activeEnv].filter((variable) => !selectedVars.has(variable.id)),
       }));
-      setSelectedVars(new Set());
+      selectedVars.clear();
       toast.success(`Deleted ${selectedVars.size} variable${selectedVars.size > 1 ? "s" : ""}`);
     } catch {
       toast.error("Failed to delete some variables");
@@ -324,7 +289,7 @@ export function ProjectView({ project }: ProjectViewProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={clearSelection}
+                            onClick={selectedVars.clear}
                           >
                             Clear
                           </Button>
@@ -344,7 +309,7 @@ export function ProjectView({ project }: ProjectViewProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={selectAll}
+                          onClick={selectAllVars}
                         >
                           <CheckSquare className="mr-2 h-4 w-4" />
                           Select All
@@ -380,10 +345,10 @@ export function ProjectView({ project }: ProjectViewProps) {
                         cryptoKey={cryptoKey}
                         isVisible={visibleValues.has(variable.id)}
                         isSelected={selectedVars.has(variable.id)}
-                        isCopied={copiedId === variable.id}
-                        onToggleVisibility={() => toggleValueVisibility(variable.id)}
-                        onToggleSelection={() => toggleSelection(variable.id)}
-                        onCopy={() => copyToClipboard(variable.value, variable.id)}
+                        isCopied={clipboard.isCopied(variable.id)}
+                        onToggleVisibility={() => visibleValues.toggle(variable.id)}
+                        onToggleSelection={() => selectedVars.toggle(variable.id)}
+                        onCopy={() => clipboard.copy(variable.value, variable.id)}
                         onUpdate={(updated) => handleVariableUpdate(env.id, updated)}
                         onDelete={async () => {
                           try {

@@ -4,13 +4,7 @@ import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { registerLimiter, getClientIp, checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { registerSchema, validateInput } from "@/lib/validation/schemas";
-
-// Generate a random salt (16 bytes, base64 encoded)
-function generateSalt(): string {
-  const array = new Uint8Array(16);
-  crypto.getRandomValues(array);
-  return Buffer.from(array).toString("base64");
-}
+import { generateSalt } from "@/lib/crypto/encryption";
 
 export async function POST(req: Request) {
   try {

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,307 +13,496 @@ import {
   CheckCircle2,
   Github,
 } from "lucide-react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
+
+// Animation variants
+const fadeIn = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" as const }
+  }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1
+    }
+  }
+};
+
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.4, ease: "easeOut" as const }
+  }
+};
 
 export default function Home() {
+  const targetRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: targetRef,
+    offset: ["start start", "end start"]
+  });
+
+  const headerOpacity = useTransform(scrollYProgress, [0, 0.1], [0, 1]);
+  const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -50]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0.3]);
+
   return (
-    <div className="flex min-h-screen flex-col">
+    <div ref={targetRef} className="flex min-h-screen flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-50 glass">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
-          <Link href="/" className="flex items-center gap-2 transition-transform hover:scale-105">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
-              <Lock className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold">SecretBox</span>
+      <motion.header
+        className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-sm"
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" as const }}
+      >
+        <motion.div
+          className="absolute inset-0 bg-background"
+          style={{ opacity: headerOpacity }}
+        />
+        <div className="container relative mx-auto flex h-16 items-center justify-between px-4 md:px-6">
+          <Link href="/" className="flex items-center gap-2.5">
+            <motion.div
+              className="flex h-8 w-8 items-center justify-center rounded-md bg-primary"
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Lock className="h-4 w-4 text-primary-foreground" />
+            </motion.div>
+            <span className="text-lg font-semibold tracking-tight">SecretBox</span>
           </Link>
-          <nav className="hidden items-center gap-6 md:flex">
-            <Link href="#features" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-              Features
-            </Link>
-            <Link href="#how-it-works" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-              How it works
-            </Link>
-            <Link href="#security" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-              Security
-            </Link>
+          <nav className="hidden items-center gap-8 md:flex">
+            {["Features", "How it works", "Security"].map((item, i) => (
+              <motion.div
+                key={item}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 * i, duration: 0.3 }}
+              >
+                <Link
+                  href={`#${item.toLowerCase().replace(/ /g, "-")}`}
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {item}
+                </Link>
+              </motion.div>
+            ))}
           </nav>
-          <div className="flex items-center gap-3">
+          <motion.div
+            className="flex items-center gap-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
             <Link href="/login">
               <Button variant="ghost" size="sm">
                 Log in
               </Button>
             </Link>
             <Link href="/register">
-              <Button size="sm" className="gradient-primary border-0 text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30">
-                Get Started
-                <ArrowRight className="ml-1 h-4 w-4" />
-              </Button>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button size="sm">
+                  Get Started
+                </Button>
+              </motion.div>
             </Link>
-          </div>
+          </motion.div>
         </div>
-      </header>
+      </motion.header>
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative overflow-hidden py-20 md:py-32">
-          {/* Background decoration */}
-          <div className="absolute inset-0 gradient-hero" />
-          <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-accent/10 blur-3xl" />
+        <section className="py-24 md:py-32 overflow-hidden">
+          <motion.div
+            className="container mx-auto px-4 md:px-6"
+            style={{ y: heroY, opacity: heroOpacity }}
+          >
+            <div className="mx-auto max-w-2xl">
+              <motion.div
+                className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <motion.span
+                  className="h-1.5 w-1.5 rounded-full bg-accent"
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+                <span className="text-accent">Open source</span>
+              </motion.div>
 
-          <div className="container relative mx-auto px-4 md:px-6">
-            <div className="mx-auto max-w-3xl text-center">
-              {/* Badge */}
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border bg-background/80 px-4 py-1.5 text-sm backdrop-blur-sm animate-fade-in-up">
-                <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-muted-foreground">Now with 2FA & Team Collaboration</span>
-              </div>
+              <motion.h1
+                className="text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+              >
+                Environment variables,{" "}
+                <motion.span
+                  className="text-accent inline-block"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                >
+                  encrypted.
+                </motion.span>
+              </motion.h1>
 
-              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl animate-fade-in-up animation-delay-100">
-                Secure Your
-                <span className="relative mx-3 inline-block">
-                  <span className="relative z-10 bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
-                    Environment
-                  </span>
-                  <span className="absolute -bottom-1 left-0 h-3 w-full bg-primary/20 -rotate-1 rounded" />
-                </span>
-                Variables
-              </h1>
+              <motion.p
+                className="mt-6 text-lg text-muted-foreground"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                End-to-end encrypted secrets management. Your data is encrypted in your browser before it ever reaches our servers.
+              </motion.p>
 
-              <p className="mx-auto mt-6 max-w-xl text-lg text-muted-foreground md:text-xl animate-fade-in-up animation-delay-200">
-                End-to-end encrypted secrets management for modern teams.
-                Store, sync, and share environment variables securely.
-              </p>
-
-              <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row animate-fade-in-up animation-delay-300">
+              <motion.div
+                className="mt-8 flex flex-col gap-3 sm:flex-row"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+              >
                 <Link href="/register">
-                  <Button size="lg" className="gradient-primary border-0 text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 hover:scale-105">
-                    Start for Free
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  <motion.div
+                    whileHover={{ scale: 1.02, x: 5 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button size="lg" className="group">
+                      Get Started
+                      <motion.span
+                        className="ml-2"
+                        initial={{ x: 0 }}
+                        whileHover={{ x: 3 }}
+                      >
+                        <ArrowRight className="h-4 w-4" />
+                      </motion.span>
+                    </Button>
+                  </motion.div>
                 </Link>
                 <Link href="https://github.com/tommar21/secret-box" target="_blank">
-                  <Button variant="outline" size="lg" className="group">
-                    <Github className="mr-2 h-4 w-4 transition-transform group-hover:scale-110" />
-                    View on GitHub
-                  </Button>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button variant="outline" size="lg">
+                      <Github className="mr-2 h-4 w-4" />
+                      GitHub
+                    </Button>
+                  </motion.div>
                 </Link>
-              </div>
+              </motion.div>
 
-              {/* Trust indicators */}
-              <div className="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm text-muted-foreground animate-fade-in-up animation-delay-400">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span>Free forever for personal use</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span>No credit card required</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span>Open source</span>
-                </div>
-              </div>
+              <motion.div
+                className="mt-10 flex flex-wrap gap-6 text-sm text-muted-foreground"
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+              >
+                {[
+                  "Free for personal use",
+                  "No credit card",
+                  "Self-hostable"
+                ].map((text) => (
+                  <motion.span
+                    key={text}
+                    className="flex items-center gap-1.5"
+                    variants={fadeIn}
+                  >
+                    <CheckCircle2 className="h-4 w-4 text-accent" />
+                    {text}
+                  </motion.span>
+                ))}
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
         </section>
 
         {/* Features Section */}
-        <section id="features" className="border-t py-20 md:py-28">
+        <section id="features" className="border-t py-20 md:py-24">
           <div className="container mx-auto px-4 md:px-6">
-            <div className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                Everything you need to manage secrets
+            <motion.div
+              className="mx-auto max-w-2xl"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              variants={fadeIn}
+            >
+              <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
+                Features
               </h2>
-              <p className="mt-4 text-lg text-muted-foreground">
-                Powerful features designed for developers and teams who take security seriously.
+              <p className="mt-2 text-muted-foreground">
+                Everything you need to manage secrets securely.
               </p>
-            </div>
+            </motion.div>
 
-            <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <motion.div
+              className="mx-auto mt-12 grid max-w-2xl gap-8 md:max-w-none md:grid-cols-2 lg:grid-cols-3"
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-50px" }}
+            >
               <FeatureCard
-                icon={<Shield className="h-6 w-6" />}
-                iconBg="bg-primary/10 text-primary"
+                icon={<Shield className="h-5 w-5" />}
                 title="End-to-End Encryption"
-                description="Your secrets are encrypted in your browser using AES-256-GCM. We never see your data in plain text."
+                description="AES-256-GCM encryption in your browser. We never see your data."
               />
               <FeatureCard
-                icon={<FolderSync className="h-6 w-6" />}
-                iconBg="bg-teal-500/10 text-teal-600 dark:text-teal-400"
+                icon={<FolderSync className="h-5 w-5" />}
                 title="Sync Across Devices"
-                description="Access your environment variables from anywhere. Changes sync automatically across all your devices."
+                description="Access your variables from anywhere. Changes sync automatically."
               />
               <FeatureCard
-                icon={<Key className="h-6 w-6" />}
-                iconBg="bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                icon={<Key className="h-5 w-5" />}
                 title="Global Variables"
-                description="Define variables once, use them across all your projects. No more copy-pasting API keys."
+                description="Define once, use everywhere. No more copy-pasting API keys."
               />
               <FeatureCard
-                icon={<Users className="h-6 w-6" />}
-                iconBg="bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                icon={<Users className="h-5 w-5" />}
                 title="Team Collaboration"
-                description="Share secrets securely with your team. Role-based access control keeps everyone on the right track."
+                description="Share secrets with role-based access control."
               />
               <FeatureCard
-                icon={<Zap className="h-6 w-6" />}
-                iconBg="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+                icon={<Zap className="h-5 w-5" />}
                 title="API Access"
-                description="Integrate with your CI/CD pipeline using our REST API. Generate tokens with fine-grained permissions."
+                description="REST API for CI/CD integration with fine-grained tokens."
               />
               <FeatureCard
-                icon={<Lock className="h-6 w-6" />}
-                iconBg="bg-green-500/10 text-green-600 dark:text-green-400"
+                icon={<Lock className="h-5 w-5" />}
                 title="Two-Factor Auth"
-                description="Protect your account with TOTP-based 2FA. Compatible with Google Authenticator and Authy."
+                description="TOTP-based 2FA. Works with any authenticator app."
               />
-            </div>
+            </motion.div>
           </div>
         </section>
 
         {/* How it works */}
-        <section id="how-it-works" className="border-t bg-muted/30 py-20 md:py-28">
+        <section id="how-it-works" className="border-t py-20 md:py-24">
           <div className="container mx-auto px-4 md:px-6">
-            <div className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+            <motion.div
+              className="mx-auto max-w-2xl"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              variants={fadeIn}
+            >
+              <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
                 How it works
               </h2>
-              <p className="mt-4 text-lg text-muted-foreground">
-                Get started in three simple steps
+              <p className="mt-2 text-muted-foreground">
+                Three steps to secure your secrets.
               </p>
-            </div>
 
-            <div className="mt-16 grid gap-8 md:grid-cols-3">
-              <StepCard
-                number="1"
-                title="Create your vault"
-                description="Sign up and set a master password. This password encrypts all your secrets locally."
-              />
-              <StepCard
-                number="2"
-                title="Add your secrets"
-                description="Create projects and add environment variables. Organize them by environment (dev, staging, prod)."
-              />
-              <StepCard
-                number="3"
-                title="Use anywhere"
-                description="Export as .env files, use the API, or share with your team. Your secrets, your way."
-              />
-            </div>
+              <motion.div
+                className="mt-10 space-y-8"
+                variants={staggerContainer}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-50px" }}
+              >
+                <StepCard
+                  number="1"
+                  title="Create your vault"
+                  description="Set a master password that encrypts all your secrets locally."
+                />
+                <StepCard
+                  number="2"
+                  title="Add your secrets"
+                  description="Organize variables by project and environment (dev, staging, prod)."
+                />
+                <StepCard
+                  number="3"
+                  title="Use anywhere"
+                  description="Export as .env, use the API, or share with your team."
+                />
+              </motion.div>
+            </motion.div>
           </div>
         </section>
 
         {/* Security Section */}
-        <section id="security" className="border-t py-20 md:py-28">
+        <section id="security" className="border-t py-20 md:py-24">
           <div className="container mx-auto px-4 md:px-6">
-            <div className="mx-auto max-w-4xl">
-              <div className="rounded-2xl border bg-card p-8 md:p-12">
-                <div className="flex flex-col items-center gap-8 md:flex-row">
-                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl gradient-primary animate-pulse-ring">
-                    <Shield className="h-10 w-10 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold md:text-3xl">
-                      Security First Architecture
-                    </h2>
-                    <p className="mt-4 text-muted-foreground">
-                      SecretBox uses <strong>zero-knowledge encryption</strong>. Your master password never leaves your device.
-                      All encryption and decryption happens in your browser using the Web Crypto API with
-                      <strong> PBKDF2 (100,000 iterations)</strong> for key derivation and <strong>AES-256-GCM</strong> for encryption.
-                    </p>
-                    <div className="mt-6 flex flex-wrap gap-3">
-                      <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                        Zero Knowledge
-                      </span>
-                      <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                        AES-256-GCM
-                      </span>
-                      <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                        PBKDF2
-                      </span>
-                      <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                        Open Source
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <motion.div
+              className="mx-auto max-w-2xl"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              variants={fadeIn}
+            >
+              <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
+                Security
+              </h2>
+              <p className="mt-2 text-muted-foreground">
+                Zero-knowledge architecture. We can&apos;t read your secrets.
+              </p>
+
+              <motion.div
+                className="mt-8 rounded-lg border bg-card p-6"
+                variants={scaleIn}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                whileHover={{ scale: 1.01 }}
+                transition={{ duration: 0.2 }}
+              >
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Your master password never leaves your device. All encryption happens in your browser using the Web Crypto API.
+                  We use <span className="text-foreground">PBKDF2</span> with 100,000 iterations for key derivation
+                  and <span className="text-foreground">AES-256-GCM</span> for encryption.
+                </p>
+                <motion.div
+                  className="mt-4 flex flex-wrap gap-2"
+                  variants={staggerContainer}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                >
+                  {["Zero Knowledge", "AES-256-GCM", "PBKDF2", "Open Source"].map((tag) => (
+                    <motion.span
+                      key={tag}
+                      className="rounded border px-2 py-0.5 text-xs text-muted-foreground"
+                      variants={fadeIn}
+                      whileHover={{
+                        scale: 1.05,
+                        borderColor: "hsl(var(--accent))",
+                        backgroundColor: "hsl(var(--accent) / 0.1)",
+                        color: "hsl(var(--accent))"
+                      }}
+                    >
+                      {tag}
+                    </motion.span>
+                  ))}
+                </motion.div>
+              </motion.div>
+            </motion.div>
           </div>
         </section>
 
         {/* CTA Section */}
-        <section className="border-t py-20 md:py-28">
-          <div className="container mx-auto px-4 text-center md:px-6">
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Ready to secure your secrets?
-            </h2>
-            <p className="mx-auto mt-4 max-w-md text-lg text-muted-foreground">
-              Join developers who trust SecretBox to protect their environment variables.
-            </p>
-            <div className="mt-10">
-              <Link href="/register">
-                <Button size="lg" className="gradient-primary border-0 text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 hover:scale-105">
-                  Create your vault
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
+        <section className="border-t py-20 md:py-24">
+          <div className="container mx-auto px-4 md:px-6">
+            <motion.div
+              className="mx-auto max-w-2xl"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              variants={fadeIn}
+            >
+              <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
+                Ready to start?
+              </h2>
+              <p className="mt-2 text-muted-foreground">
+                Create your vault in under a minute.
+              </p>
+              <motion.div
+                className="mt-6"
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Link href="/register">
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button size="lg" className="group bg-accent text-accent-foreground hover:bg-accent/90">
+                      Create your vault
+                      <motion.span
+                        className="ml-2 inline-block"
+                        animate={{ x: [0, 3, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" as const }}
+                      >
+                        <ArrowRight className="h-4 w-4" />
+                      </motion.span>
+                    </Button>
+                  </motion.div>
+                </Link>
+              </motion.div>
+            </motion.div>
           </div>
         </section>
       </main>
 
       {/* Footer */}
-      <footer className="border-t py-12">
+      <motion.footer
+        className="border-t py-8"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+      >
         <div className="container mx-auto px-4 md:px-6">
-          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
-                <Lock className="h-4 w-4 text-white" />
-              </div>
-              <span className="font-semibold">SecretBox</span>
+          <div className="flex flex-col items-center justify-between gap-4 text-sm text-muted-foreground md:flex-row">
+            <motion.div
+              className="flex items-center gap-2"
+              whileHover={{ scale: 1.02 }}
+            >
+              <Lock className="h-4 w-4" />
+              <span>SecretBox</span>
+            </motion.div>
+            <div className="flex items-center gap-6">
+              {[
+                { href: "https://github.com/tommar21/secret-box", label: "GitHub", external: true },
+                { href: "#features", label: "Features" },
+                { href: "#security", label: "Security" }
+              ].map((link) => (
+                <motion.div
+                  key={link.label}
+                  whileHover={{ y: -2 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Link
+                    href={link.href}
+                    target={link.external ? "_blank" : undefined}
+                    className="hover:text-foreground transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </motion.div>
+              ))}
             </div>
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <Link href="https://github.com/tommar21/secret-box" target="_blank" className="transition-colors hover:text-foreground">
-                GitHub
-              </Link>
-              <Link href="#features" className="transition-colors hover:text-foreground">
-                Features
-              </Link>
-              <Link href="#security" className="transition-colors hover:text-foreground">
-                Security
-              </Link>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} SecretBox. Open source under MIT.
-            </p>
+            <p>MIT License</p>
           </div>
         </div>
-      </footer>
+      </motion.footer>
     </div>
   );
 }
 
 function FeatureCard({
   icon,
-  iconBg,
   title,
   description,
 }: {
   icon: React.ReactNode;
-  iconBg: string;
   title: string;
   description: string;
 }) {
   return (
-    <div className="group relative rounded-xl border bg-card p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5">
-      <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg ${iconBg} transition-transform group-hover:scale-110`}>
-        {icon}
+    <motion.div
+      className="group space-y-2 rounded-lg border border-transparent p-4 transition-colors hover:border-accent/30 hover:bg-accent/5"
+      variants={fadeIn}
+      whileHover={{ scale: 1.02, x: 5 }}
+      transition={{ duration: 0.2 }}
+    >
+      <div className="flex items-center gap-2 text-foreground">
+        <motion.span
+          className="text-primary group-hover:text-accent transition-colors"
+          whileHover={{ rotate: 10, scale: 1.1 }}
+          transition={{ duration: 0.2 }}
+        >
+          {icon}
+        </motion.span>
+        <h3 className="font-medium">{title}</h3>
       </div>
-      <h3 className="text-lg font-semibold">{title}</h3>
-      <p className="mt-2 text-muted-foreground">{description}</p>
-    </div>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </motion.div>
   );
 }
 
@@ -325,12 +516,23 @@ function StepCard({
   description: string;
 }) {
   return (
-    <div className="relative text-center">
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full gradient-primary text-2xl font-bold text-white shadow-lg shadow-primary/25">
+    <motion.div
+      className="flex gap-4"
+      variants={fadeIn}
+      whileHover={{ x: 10 }}
+      transition={{ duration: 0.2 }}
+    >
+      <motion.div
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-foreground"
+        whileHover={{ scale: 1.1 }}
+        transition={{ duration: 0.2 }}
+      >
         {number}
+      </motion.div>
+      <div>
+        <h3 className="font-medium">{title}</h3>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
-      <h3 className="text-xl font-semibold">{title}</h3>
-      <p className="mt-2 text-muted-foreground">{description}</p>
-    </div>
+    </motion.div>
   );
 }

@@ -7,6 +7,7 @@ import {
   generateOTPAuthURI,
   generateQRCodeDataURL,
 } from "@/lib/totp";
+import { encryptServerSide } from "@/lib/crypto/server-encryption";
 
 export async function POST() {
   try {
@@ -34,10 +35,11 @@ export async function POST() {
     const otpAuthURI = generateOTPAuthURI(session.user.email, secret);
     const qrCodeDataURL = await generateQRCodeDataURL(otpAuthURI);
 
-    // Store the secret temporarily (not enabled yet until verified)
+    // Encrypt and store the secret temporarily (not enabled yet until verified)
+    const encryptedSecret = encryptServerSide(secret);
     await db.user.update({
       where: { id: session.user.id },
-      data: { twoFactorSecret: secret },
+      data: { twoFactorSecret: encryptedSecret },
     });
 
     return NextResponse.json({

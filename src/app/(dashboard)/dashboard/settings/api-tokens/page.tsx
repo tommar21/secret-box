@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -234,6 +234,16 @@ function CreateTokenDialog({
   const [newToken, setNewToken] = useState<NewToken | null>(null);
   const [copied, setCopied] = useState(false);
   const [permissions, setPermissions] = useState<ApiPermission[]>(["READ"]);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -268,10 +278,13 @@ function CreateTokenDialog({
 
   function handleCopy() {
     if (newToken?.token) {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
       navigator.clipboard.writeText(newToken.token);
       setCopied(true);
       toast.success("Token copied to clipboard");
-      setTimeout(() => setCopied(false), 2000);
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
     }
   }
 

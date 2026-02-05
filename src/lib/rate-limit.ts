@@ -55,13 +55,25 @@ export function getClientIp(request: Request): string {
   return "127.0.0.1";
 }
 
+// Check if we're in production and rate limiting is required
+const isProduction = process.env.NODE_ENV === "production";
+
 // Helper to check rate limit and return error response if exceeded
 export async function checkRateLimit(
   limiter: Ratelimit | null,
   identifier: string
 ): Promise<{ success: boolean; remaining?: number; reset?: number }> {
   if (!limiter) {
-    // If rate limiting is not configured, allow the request
+    // SECURITY: In production, fail-closed if rate limiting is not configured
+    if (isProduction) {
+      console.error("[Rate Limit] CRITICAL: Rate limiting not configured in production!");
+      return {
+        success: false,
+        remaining: 0,
+        reset: Date.now() + 60000,
+      };
+    }
+    // In development, allow requests without rate limiting
     return { success: true };
   }
 
