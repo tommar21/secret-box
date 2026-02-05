@@ -65,13 +65,21 @@ export async function checkRateLimit(
     return { success: true };
   }
 
-  const result = await limiter.limit(identifier);
+  try {
+    const result = await limiter.limit(identifier);
 
-  return {
-    success: result.success,
-    remaining: result.remaining,
-    reset: result.reset,
-  };
+    return {
+      success: result.success,
+      remaining: result.remaining,
+      reset: result.reset,
+    };
+  } catch (error) {
+    // If rate limiting fails (e.g., Upstash permission error), allow the request
+    // This is a "fail open" approach - we don't want to block legitimate users
+    // if there's an issue with the rate limiting service
+    console.error("[Rate Limit] Error checking rate limit:", error);
+    return { success: true, remaining: -1, reset: Date.now() };
+  }
 }
 
 // Create rate limit response headers

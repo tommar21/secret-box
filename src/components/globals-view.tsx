@@ -25,6 +25,7 @@ import {
   Eye,
   EyeOff,
   Copy,
+  Check,
   Loader2,
   Key,
   Pencil,
@@ -120,10 +121,16 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
     });
   }
 
-  const copyToClipboard = useCallback((value: string) => {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyToClipboard = useCallback((value: string, id: string) => {
     navigator.clipboard
       .writeText(value)
-      .then(() => toast.success("Copied to clipboard"))
+      .then(() => {
+        setCopiedId(id);
+        toast.success("Copied to clipboard");
+        setTimeout(() => setCopiedId(null), 2000);
+      })
       .catch(() => toast.error("Failed to copy to clipboard"));
   }, []);
 
@@ -217,19 +224,29 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="mt-3 text-sm text-muted-foreground">Decrypting global variables...</p>
         </div>
       ) : decryptedGlobals.length === 0 ? (
-        <Card>
+        <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <Key className="h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">No global variables</h3>
-            <p className="mt-2 text-center text-sm text-muted-foreground">
-              Global variables are shared across all projects.
-              <br />
-              Great for API keys you use everywhere.
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-purple-500/10 to-primary/10">
+              <Key className="h-10 w-10 text-purple-500" />
+            </div>
+            <h3 className="mt-6 text-xl font-semibold">No global variables yet</h3>
+            <p className="mt-2 max-w-sm text-center text-sm text-muted-foreground">
+              Global variables are shared across all your projects.
+              Perfect for API keys and secrets you use everywhere.
             </p>
+            <div className="mt-6">
+              <AddGlobalDialog
+                cryptoKey={cryptoKey}
+                onSuccess={(newGlobal) => {
+                  setDecryptedGlobals((prev) => [newGlobal, ...prev]);
+                }}
+              />
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -279,43 +296,46 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
               {decryptedGlobals.map((variable) => (
                 <div
                   key={variable.id}
-                  className={`flex items-center gap-4 rounded-md border p-3 transition-colors ${
-                    selectedVars.has(variable.id) ? "border-primary bg-primary/5" : ""
+                  className={`group flex items-center gap-4 rounded-lg border p-3 transition-all duration-200 hover:shadow-sm ${
+                    selectedVars.has(variable.id)
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "hover:border-primary/30 hover:bg-muted/50"
                   }`}
                 >
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="shrink-0"
+                    className="shrink-0 transition-transform hover:scale-110"
                     onClick={() => toggleSelection(variable.id)}
                   >
                     {selectedVars.has(variable.id) ? (
                       <CheckSquare className="h-4 w-4 text-primary" />
                     ) : (
-                      <Square className="h-4 w-4" />
+                      <Square className="h-4 w-4 opacity-50 group-hover:opacity-100" />
                     )}
                   </Button>
                   <div className="min-w-0 flex-1">
-                    <code className="text-sm font-medium">{variable.key}</code>
+                    <code className="rounded bg-muted/50 px-2 py-1 text-sm font-semibold">{variable.key}</code>
                     {variable.linkedProjects.length > 0 && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Used in: {variable.linkedProjects.join(", ")}
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        <span className="font-medium">Used in:</span> {variable.linkedProjects.join(", ")}
                       </p>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <code className="text-sm text-muted-foreground">
+                    <code className="text-sm text-muted-foreground font-mono">
                       {variable.isSecret && !visibleValues.has(variable.id)
                         ? "••••••••••••"
                         : variable.value}
                     </code>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
                     {variable.isSecret && (
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => toggleValueVisibility(variable.id)}
+                        className="hover:bg-primary/10 hover:text-primary"
                       >
                         {visibleValues.has(variable.id) ? (
                           <EyeOff className="h-4 w-4" />
@@ -327,14 +347,20 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => copyToClipboard(variable.value)}
+                      onClick={() => copyToClipboard(variable.value, variable.id)}
+                      className={`transition-all ${copiedId === variable.id ? "text-green-500" : "hover:bg-primary/10 hover:text-primary"}`}
                     >
-                      <Copy className="h-4 w-4" />
+                      {copiedId === variable.id ? (
+                        <Check className="h-4 w-4 animate-in zoom-in-50" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => setEditingVar(variable)}
+                      className="hover:bg-primary/10 hover:text-primary"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -342,8 +368,9 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDelete(variable.id)}
+                      className="hover:bg-destructive/10 hover:text-destructive"
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

@@ -25,18 +25,21 @@ export function DashboardShell({ children, user, projects = [] }: DashboardShell
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-muted/30">
       {/* Mobile header */}
-      <div className="fixed left-0 right-0 top-0 z-40 flex h-14 items-center gap-4 border-b bg-background px-4 md:hidden">
+      <div className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:hidden">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="hover:bg-primary/10"
         >
           <Menu className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-2">
-          <Lock className="h-5 w-5" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
+            <Lock className="h-4 w-4 text-white" />
+          </div>
           <span className="font-bold">SecretBox</span>
         </div>
       </div>
@@ -44,7 +47,7 @@ export function DashboardShell({ children, user, projects = [] }: DashboardShell
       {/* Overlay for mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden transition-opacity"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -58,9 +61,9 @@ export function DashboardShell({ children, user, projects = [] }: DashboardShell
       />
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto pt-14 md:pt-0">
+      <main className="flex-1 overflow-auto pt-16 md:pt-0">
         <VaultProvider>
-          <div className="container mx-auto p-4 md:p-6">{children}</div>
+          <div className="container mx-auto p-4 md:p-6 lg:p-8">{children}</div>
         </VaultProvider>
       </main>
 
@@ -88,21 +91,23 @@ const Sidebar = memo(function Sidebar({
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 border-r bg-background transition-transform md:static md:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 w-64 border-r bg-background shadow-lg transition-transform duration-300 md:static md:translate-x-0 md:shadow-none",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-14 items-center justify-between gap-2 border-b px-4 md:h-16">
-          <div className="flex items-center gap-2">
-            <Lock className="h-6 w-6" />
+        <div className="flex h-16 items-center justify-between gap-2 border-b px-4">
+          <Link href="/" className="flex items-center gap-2 transition-transform hover:scale-105">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
+              <Lock className="h-5 w-5 text-white" />
+            </div>
             <span className="text-xl font-bold">SecretBox</span>
-          </div>
+          </Link>
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden hover:bg-destructive/10 hover:text-destructive"
             onClick={onClose}
           >
             <X className="h-5 w-5" />
@@ -121,6 +126,7 @@ const Sidebar = memo(function Sidebar({
             icon={<FolderKey className="h-4 w-4" />}
             isActive={pathname === "/dashboard"}
             onClick={onClose}
+            iconBg="bg-primary/10 text-primary"
           >
             Projects
           </NavLink>
@@ -129,6 +135,7 @@ const Sidebar = memo(function Sidebar({
             icon={<Key className="h-4 w-4" />}
             isActive={pathname === "/dashboard/globals"}
             onClick={onClose}
+            iconBg="bg-purple-500/10 text-purple-600 dark:text-purple-400"
           >
             Global Variables
           </NavLink>
@@ -137,6 +144,7 @@ const Sidebar = memo(function Sidebar({
             icon={<Users className="h-4 w-4" />}
             isActive={pathname?.startsWith("/dashboard/teams")}
             onClick={onClose}
+            iconBg="bg-teal-500/10 text-teal-600 dark:text-teal-400"
           >
             Teams
           </NavLink>
@@ -145,6 +153,7 @@ const Sidebar = memo(function Sidebar({
             icon={<Settings className="h-4 w-4" />}
             isActive={pathname?.startsWith("/dashboard/settings")}
             onClick={onClose}
+            iconBg="bg-muted text-muted-foreground"
           >
             Settings
           </NavLink>
@@ -156,19 +165,22 @@ const Sidebar = memo(function Sidebar({
             <Button
               variant="outline"
               size="sm"
-              className="w-full justify-start gap-2"
+              className="w-full justify-start gap-2 group hover:border-green-500/50 hover:bg-green-500/5"
               onClick={() => lock()}
             >
-              <LockOpen className="h-4 w-4" />
-              Lock Vault
-              <kbd className="ml-auto rounded border bg-muted px-1 text-[10px]">⌘L</kbd>
+              <LockOpen className="h-4 w-4 text-green-500" />
+              <span className="text-green-600 dark:text-green-400">Vault Unlocked</span>
+              <kbd className="ml-auto rounded border bg-muted px-1.5 py-0.5 text-[10px] font-mono">⌘L</kbd>
             </Button>
           </div>
         )}
 
         {/* User */}
         <div className="border-t p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 text-sm font-semibold text-primary">
+              {user.name?.[0]?.toUpperCase() || "U"}
+            </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{user.name}</p>
               <p className="truncate text-xs text-muted-foreground">
@@ -178,6 +190,7 @@ const Sidebar = memo(function Sidebar({
             <Button
               variant="ghost"
               size="icon"
+              className="shrink-0 hover:bg-destructive/10 hover:text-destructive transition-colors"
               onClick={() => signOut({ callbackUrl: "/" })}
             >
               <LogOut className="h-4 w-4" />
@@ -195,25 +208,32 @@ function NavLink({
   children,
   isActive,
   onClick,
+  iconBg,
 }: {
   href: string;
   icon: React.ReactNode;
   children: React.ReactNode;
   isActive?: boolean;
   onClick?: () => void;
+  iconBg?: string;
 }) {
   return (
     <Link
       href={href}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+        "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
         isActive
-          ? "bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-1"
       )}
     >
-      {icon}
+      <div className={cn(
+        "flex h-7 w-7 items-center justify-center rounded-md transition-transform group-hover:scale-110",
+        isActive ? "bg-white/20" : iconBg
+      )}>
+        {icon}
+      </div>
       {children}
     </Link>
   );

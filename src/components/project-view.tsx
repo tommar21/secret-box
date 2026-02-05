@@ -37,10 +37,12 @@ import {
   Eye,
   EyeOff,
   Copy,
+  Check,
   Loader2,
   Pencil,
   CheckSquare,
   Square,
+  FileCode,
 } from "lucide-react";
 import { useVaultStore } from "@/stores/vault-store";
 import { encryptVariable, decryptVariable } from "@/lib/crypto/encryption";
@@ -153,10 +155,16 @@ export function ProjectView({ project }: ProjectViewProps) {
     });
   }
 
-  const copyToClipboard = useCallback((value: string) => {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyToClipboard = useCallback((value: string, id: string) => {
     navigator.clipboard
       .writeText(value)
-      .then(() => toast.success("Copied to clipboard"))
+      .then(() => {
+        setCopiedId(id);
+        toast.success("Copied to clipboard");
+        setTimeout(() => setCopiedId(null), 2000);
+      })
       .catch(() => toast.error("Failed to copy to clipboard"));
   }, []);
 
@@ -347,13 +355,20 @@ export function ProjectView({ project }: ProjectViewProps) {
               </CardHeader>
               <CardContent>
                 {!decryptedVars[env.id] ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="mt-3 text-sm text-muted-foreground">Decrypting variables...</p>
                   </div>
                 ) : decryptedVars[env.id].length === 0 ? (
-                  <p className="py-8 text-center text-muted-foreground">
-                    No variables yet. Add your first variable above.
-                  </p>
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                      <FileCode className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="mt-4 text-lg font-semibold">No variables yet</h3>
+                    <p className="mt-1 text-center text-sm text-muted-foreground">
+                      Add your first environment variable using the button above.
+                    </p>
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     {decryptedVars[env.id].map((variable) => (
@@ -364,9 +379,10 @@ export function ProjectView({ project }: ProjectViewProps) {
                         cryptoKey={cryptoKey}
                         isVisible={visibleValues.has(variable.id)}
                         isSelected={selectedVars.has(variable.id)}
+                        isCopied={copiedId === variable.id}
                         onToggleVisibility={() => toggleValueVisibility(variable.id)}
                         onToggleSelection={() => toggleSelection(variable.id)}
-                        onCopy={() => copyToClipboard(variable.value)}
+                        onCopy={() => copyToClipboard(variable.value, variable.id)}
                         onUpdate={(updated) => handleVariableUpdate(env.id, updated)}
                         onDelete={async () => {
                           try {
@@ -401,6 +417,7 @@ const VariableRow = memo(function VariableRow({
   cryptoKey,
   isVisible,
   isSelected,
+  isCopied,
   onToggleVisibility,
   onToggleSelection,
   onCopy,
@@ -412,6 +429,7 @@ const VariableRow = memo(function VariableRow({
   cryptoKey: CryptoKey | null;
   isVisible: boolean;
   isSelected: boolean;
+  isCopied: boolean;
   onToggleVisibility: () => void;
   onToggleSelection: () => void;
   onCopy: () => void;
@@ -423,27 +441,29 @@ const VariableRow = memo(function VariableRow({
   return (
     <>
       <div
-        className={`flex items-center gap-4 rounded-md border p-3 transition-colors ${
-          isSelected ? "border-primary bg-primary/5" : ""
+        className={`group flex items-center gap-4 rounded-lg border p-3 transition-all duration-200 hover:shadow-sm ${
+          isSelected
+            ? "border-primary bg-primary/5 shadow-sm"
+            : "hover:border-primary/30 hover:bg-muted/50"
         }`}
       >
         <Button
           variant="ghost"
           size="icon"
-          className="shrink-0"
+          className="shrink-0 transition-transform hover:scale-110"
           onClick={onToggleSelection}
         >
           {isSelected ? (
             <CheckSquare className="h-4 w-4 text-primary" />
           ) : (
-            <Square className="h-4 w-4" />
+            <Square className="h-4 w-4 opacity-50 group-hover:opacity-100" />
           )}
         </Button>
         <div className="min-w-0 flex-1">
-          <code className="text-sm font-medium">{variable.key}</code>
+          <code className="rounded bg-muted/50 px-2 py-1 text-sm font-semibold">{variable.key}</code>
         </div>
         <div className="min-w-0 flex-1">
-          <code className="text-sm text-muted-foreground">
+          <code className="text-sm text-muted-foreground font-mono">
             {variable.isSecret && !isVisible
               ? "••••••••••••"
               : isVisible || !variable.isSecret
@@ -451,9 +471,14 @@ const VariableRow = memo(function VariableRow({
               : "••••••••••••"}
           </code>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
           {variable.isSecret && (
-            <Button variant="ghost" size="icon" onClick={onToggleVisibility}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleVisibility}
+              className="hover:bg-primary/10 hover:text-primary"
+            >
               {isVisible ? (
                 <EyeOff className="h-4 w-4" />
               ) : (
@@ -461,14 +486,33 @@ const VariableRow = memo(function VariableRow({
               )}
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={onCopy}>
-            <Copy className="h-4 w-4" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onCopy}
+            className={`transition-all ${isCopied ? "text-green-500" : "hover:bg-primary/10 hover:text-primary"}`}
+          >
+            {isCopied ? (
+              <Check className="h-4 w-4 animate-in zoom-in-50" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsEditing(true)}
+            className="hover:bg-primary/10 hover:text-primary"
+          >
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={onDelete}>
-            <Trash2 className="h-4 w-4 text-destructive" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onDelete}
+            className="hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </div>
