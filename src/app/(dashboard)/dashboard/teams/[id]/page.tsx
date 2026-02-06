@@ -132,7 +132,7 @@ export default function TeamDetailPage({
         prev
           ? {
               ...prev,
-              members: prev.members.filter((m) => m.id !== member.id),
+              members: prev.members.filter((m: Member) => m.id !== member.id),
             }
           : null
       );
@@ -149,7 +149,7 @@ export default function TeamDetailPage({
         prev
           ? {
               ...prev,
-              members: prev.members.map((m) =>
+              members: prev.members.map((m: Member) =>
                 m.id === memberId ? { ...m, role } : m
               ),
             }
