@@ -198,7 +198,7 @@ export default function TeamDetailPage({
         <div className="flex items-center gap-2">
           <InviteMemberDialog
             teamId={id}
-            onSuccess={(member) =>
+            onSuccess={(member: Member) =>
               setTeam((prev: Team | null) =>
                 prev ? { ...prev, members: [...prev.members, member] } : null
               )
@@ -233,7 +233,7 @@ export default function TeamDetailPage({
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {team.members.map((member) => (
+              {team.members.map((member: Member) => (
                 <div
                   key={member.id}
                   className="flex items-center justify-between rounded-md border p-3"
@@ -254,7 +254,7 @@ export default function TeamDetailPage({
                       <>
                         <Select
                           value={member.role}
-                          onValueChange={(value) =>
+                          onValueChange={(value: string) =>
                             handleRoleChange(member.id, value as TeamRole)
                           }
                         >
@@ -306,7 +306,7 @@ export default function TeamDetailPage({
               </p>
             ) : (
               <div className="space-y-2">
-                {team.projects.map((tp) => (
+                {team.projects.map((tp: Team["projects"][number]) => (
                   <Link
                     key={tp.project.id}
                     href={`/dashboard/projects/${tp.project.id}`}
@@ -391,7 +391,7 @@ function InviteMemberDialog({
               <label htmlFor="role" className="text-sm font-medium">
                 Role
               </label>
-              <Select value={role} onValueChange={(v) => setRole(v as TeamRole)}>
+              <Select value={role} onValueChange={(v: string) => setRole(v as TeamRole)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
