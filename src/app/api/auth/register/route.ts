@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { registerLimiter, getClientIp, checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
+import { registerLimiter, getClientIp, checkRateLimit, rateLimitHeaders, formatRetryTime } from "@/lib/rate-limit";
 import { registerSchema, validateInput } from "@/lib/validation/schemas";
 import { generateSalt } from "@/lib/crypto/encryption";
 
@@ -13,8 +13,9 @@ export async function POST(req: Request) {
     const rateLimitResult = await checkRateLimit(registerLimiter, ip);
 
     if (!rateLimitResult.success) {
+      const retryIn = formatRetryTime(rateLimitResult.reset ?? Date.now() + 60000);
       return NextResponse.json(
-        { error: "Too many registration attempts. Please try again later." },
+        { error: `Too many registration attempts. Please try again in ${retryIn}.` },
         {
           status: 429,
           headers: rateLimitHeaders(rateLimitResult.remaining ?? 0, rateLimitResult.reset ?? 0),

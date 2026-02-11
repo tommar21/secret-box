@@ -115,5 +115,15 @@ export function rateLimitHeaders(remaining: number, reset: number): HeadersInit 
   return {
     "X-RateLimit-Remaining": remaining.toString(),
     "X-RateLimit-Reset": reset.toString(),
+    "Retry-After": Math.max(0, Math.ceil((reset - Date.now()) / 1000)).toString(),
   };
+}
+
+// Format retry time as human-readable string
+export function formatRetryTime(resetTimestamp: number): string {
+  const seconds = Math.max(0, Math.ceil((resetTimestamp - Date.now()) / 1000));
+  if (seconds <= 0) return "now";
+  if (seconds < 60) return `${seconds} seconds`;
+  const minutes = Math.ceil(seconds / 60);
+  return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
 }

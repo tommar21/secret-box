@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { loginLimiter, getClientIp, checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
+import { loginLimiter, getClientIp, checkRateLimit, rateLimitHeaders, formatRetryTime } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
@@ -11,8 +11,9 @@ export async function POST(req: Request) {
     const rateLimitResult = await checkRateLimit(loginLimiter, ip);
 
     if (!rateLimitResult.success) {
+      const retryIn = formatRetryTime(rateLimitResult.reset ?? Date.now() + 60000);
       return NextResponse.json(
-        { error: "Too many login attempts. Please try again later." },
+        { error: `Too many login attempts. Please try again in ${retryIn}.` },
         {
           status: 429,
           headers: rateLimitHeaders(rateLimitResult.remaining ?? 0, rateLimitResult.reset ?? 0),

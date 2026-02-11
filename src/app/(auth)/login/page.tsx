@@ -133,6 +133,7 @@ export default function LoginPage() {
               id="email"
               name="email"
               type="email"
+              autoComplete="email"
               placeholder="you@example.com"
               required
               disabled={isLoading}
@@ -154,6 +155,7 @@ export default function LoginPage() {
             id="password"
             name="password"
             type="password"
+            autoComplete="current-password"
             required
             disabled={isLoading}
             className="h-11 transition-shadow focus:shadow-md"

@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { logger } from "@/lib/logger";
-import { unlockLimiter, checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
+import { unlockLimiter, checkRateLimit, rateLimitHeaders, formatRetryTime } from "@/lib/rate-limit";
 import { unlockSchema, validateInput } from "@/lib/validation/schemas";
 
 export async function POST(req: Request) {
@@ -18,8 +18,9 @@ export async function POST(req: Request) {
     const rateLimitResult = await checkRateLimit(unlockLimiter, session.user.id);
 
     if (!rateLimitResult.success) {
+      const retryIn = formatRetryTime(rateLimitResult.reset ?? Date.now() + 60000);
       return NextResponse.json(
-        { error: "Too many unlock attempts. Please try again later." },
+        { error: `Too many unlock attempts. Please try again in ${retryIn}.` },
         {
           status: 429,
           headers: rateLimitHeaders(rateLimitResult.remaining ?? 0, rateLimitResult.reset ?? 0),

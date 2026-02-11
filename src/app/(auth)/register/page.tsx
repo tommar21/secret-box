@@ -142,6 +142,7 @@ export default function RegisterPage() {
               id="name"
               name="name"
               type="text"
+              autoComplete="name"
               placeholder="John Doe"
               required
               disabled={isLoading}
@@ -155,6 +156,7 @@ export default function RegisterPage() {
               id="email"
               name="email"
               type="email"
+              autoComplete="email"
               placeholder="you@example.com"
               required
               disabled={isLoading}
@@ -174,6 +176,7 @@ export default function RegisterPage() {
             id="password"
             name="password"
             type="password"
+            autoComplete="new-password"
             placeholder="Used to log in"
             required
             disabled={isLoading}
@@ -217,6 +220,7 @@ export default function RegisterPage() {
                 id="masterPassword"
                 name="masterPassword"
                 type="password"
+                autoComplete="off"
                 placeholder="Strong encryption password"
                 required
                 disabled={isLoading}
@@ -303,6 +307,7 @@ export default function RegisterPage() {
                 id="confirmMasterPassword"
                 name="confirmMasterPassword"
                 type="password"
+                autoComplete="off"
                 placeholder="Confirm your master password"
                 required
                 disabled={isLoading}
