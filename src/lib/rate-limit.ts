@@ -77,16 +77,11 @@ export async function checkRateLimit(
   identifier: string
 ): Promise<{ success: boolean; remaining?: number; reset?: number }> {
   if (!limiter) {
-    // SECURITY: In production, fail-closed if rate limiting is not configured
+    // Rate limiting is defense-in-depth. If Redis is not configured,
+    // log a warning but allow requests through so users aren't locked out.
     if (isProduction) {
-      console.error("[Rate Limit] CRITICAL: Rate limiting not configured in production!");
-      return {
-        success: false,
-        remaining: 0,
-        reset: Date.now() + 60000,
-      };
+      console.error("[Rate Limit] WARNING: Rate limiting not configured in production!");
     }
-    // In development, allow requests without rate limiting
     return { success: true };
   }
 
@@ -110,14 +105,10 @@ export async function checkRateLimit(
       reset: result.reset,
     };
   } catch (error) {
-    // SECURITY: Fail-closed approach - if rate limiting fails, reject the request
-    // This prevents potential abuse if the rate limiting service is unavailable
-    console.error("[Rate Limit] Error checking rate limit:", error);
-    return {
-      success: false,
-      remaining: 0,
-      reset: Date.now() + 60000 // Retry after 1 minute
-    };
+    // If Redis is unreachable, fail-open so users aren't locked out.
+    // Rate limiting is defense-in-depth; auth + bcrypt are the primary controls.
+    console.error("[Rate Limit] Redis error, failing open:", error);
+    return { success: true };
   }
 }
 
