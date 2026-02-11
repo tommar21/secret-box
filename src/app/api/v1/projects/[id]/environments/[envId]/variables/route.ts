@@ -1,5 +1,18 @@
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { authenticateApiRequest, hasPermission, apiError, apiSuccess } from "@/lib/api-auth";
+
+const encryptedVariableSchema = z.object({
+  keyEncrypted: z.string().min(1, "Encrypted key is required"),
+  valueEncrypted: z.string().min(1, "Encrypted value is required"),
+  ivKey: z.string().min(1, "IV for key is required"),
+  ivValue: z.string().min(1, "IV for value is required"),
+  isSecret: z.boolean().default(false),
+});
+
+const bulkVariablesSchema = z.object({
+  variables: z.array(encryptedVariableSchema).max(500, "Too many variables"),
+});
 
 interface RouteParams {
   params: Promise<{ id: string; envId: string }>;
@@ -91,12 +104,13 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   try {
     const body = await request.json();
-    const { keyEncrypted, valueEncrypted, ivKey, ivValue, isSecret } = body;
+    const parsed = encryptedVariableSchema.safeParse(body);
 
-    // Validate required fields
-    if (!keyEncrypted || !valueEncrypted || !ivKey || !ivValue) {
-      return apiError("Missing required encrypted fields");
+    if (!parsed.success) {
+      return apiError(parsed.error.issues[0]?.message || "Validation failed");
     }
+
+    const { keyEncrypted, valueEncrypted, ivKey, ivValue, isSecret } = parsed.data;
 
     // Verify project ownership and environment exists
     const environment = await db.environment.findFirst({
@@ -161,11 +175,13 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
   try {
     const body = await request.json();
-    const { variables } = body;
+    const parsed = bulkVariablesSchema.safeParse(body);
 
-    if (!Array.isArray(variables)) {
-      return apiError("Variables must be an array");
+    if (!parsed.success) {
+      return apiError(parsed.error.issues[0]?.message || "Validation failed");
     }
+
+    const { variables } = parsed.data;
 
     // Verify project ownership and environment exists
     const environment = await db.environment.findFirst({
@@ -192,19 +208,13 @@ export async function PUT(request: Request, { params }: RouteParams) {
       // Create new variables
       if (variables.length > 0) {
         await tx.variable.createMany({
-          data: variables.map((v: {
-            keyEncrypted: string;
-            valueEncrypted: string;
-            ivKey: string;
-            ivValue: string;
-            isSecret?: boolean;
-          }) => ({
+          data: variables.map((v) => ({
             environmentId: envId,
             keyEncrypted: v.keyEncrypted,
             valueEncrypted: v.valueEncrypted,
             ivKey: v.ivKey,
             ivValue: v.ivValue,
-            isSecret: v.isSecret ?? false,
+            isSecret: v.isSecret,
           })),
         });
       }

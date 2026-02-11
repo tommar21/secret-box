@@ -15,9 +15,31 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SecretBox - Secure Environment Variables",
+  metadataBase: new URL("https://mysecretbox.vercel.app"),
+  title: {
+    default: "SecretBox - Secure Environment Variables",
+    template: "%s | SecretBox",
+  },
   description:
     "Centralize all your environment variables in one secure place. End-to-end encrypted.",
+  openGraph: {
+    title: "SecretBox - Secure Environment Variables",
+    description:
+      "Centralize all your environment variables in one secure place. End-to-end encrypted.",
+    url: "https://mysecretbox.vercel.app",
+    siteName: "SecretBox",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SecretBox - Secure Environment Variables",
+    description:
+      "Centralize all your environment variables in one secure place. End-to-end encrypted.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

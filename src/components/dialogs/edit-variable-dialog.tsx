@@ -63,7 +63,7 @@ export const EditVariableDialog = memo(function EditVariableDialog({
 
       toast.success("Variable updated");
       onOpenChange(false);
-      onSuccess({ id: variable.id, key, value, isSecret });
+      onSuccess({ id: variable.id, key, value, isSecret, updatedAt: new Date() });
     } catch (error) {
       logger.error("Failed to update variable", error);
       toast.error("Failed to update variable");

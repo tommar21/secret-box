@@ -1,5 +1,12 @@
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { authenticateApiRequest, hasPermission, apiError, apiSuccess } from "@/lib/api-auth";
+
+const createProjectSchema = z.object({
+  name: z.string().min(1, "Project name is required").max(100, "Project name is too long").trim(),
+  path: z.string().max(500, "Path is too long").optional().nullable(),
+  environments: z.array(z.string().min(1).max(50)).max(20).optional(),
+});
 
 /**
  * GET /api/v1/projects
@@ -84,16 +91,16 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, path, environments } = body;
+    const parsed = createProjectSchema.safeParse(body);
 
-    if (!name || typeof name !== "string") {
-      return apiError("Project name is required");
+    if (!parsed.success) {
+      return apiError(parsed.error.issues[0]?.message || "Validation failed");
     }
 
+    const { name, path, environments } = parsed.data;
+
     // Default environments if not provided
-    const envNames = environments && Array.isArray(environments)
-      ? environments
-      : ["development", "staging", "production"];
+    const envNames = environments ?? ["development", "staging", "production"];
 
     const project = await db.project.create({
       data: {

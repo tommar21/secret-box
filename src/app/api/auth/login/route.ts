@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { logAudit } from "@/lib/audit";
 import { loginLimiter, getClientIp, checkRateLimit, rateLimitHeaders, formatRetryTime } from "@/lib/rate-limit";
+import { loginSchema, validateInput } from "@/lib/validation/schemas";
 
 export async function POST(req: Request) {
   try {
@@ -22,15 +23,18 @@ export async function POST(req: Request) {
       );
     }
 
+    // Parse and validate input
     const body = await req.json();
-    const { email, password } = body;
+    const validation = validateInput(loginSchema, body);
 
-    if (!email || !password) {
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: validation.error },
         { status: 400 }
       );
     }
+
+    const { email, password } = validation.data;
 
     // Find user
     const user = await db.user.findUnique({
