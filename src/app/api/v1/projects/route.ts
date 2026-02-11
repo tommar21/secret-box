@@ -17,26 +17,35 @@ export async function GET(request: Request) {
   }
 
   try {
-    const projects = await db.project.findMany({
-      where: { userId: auth.userId },
-      select: {
-        id: true,
-        name: true,
-        path: true,
-        createdAt: true,
-        updatedAt: true,
-        environments: {
-          select: {
-            id: true,
-            name: true,
-            _count: {
-              select: { variables: true },
+    const url = new URL(request.url);
+    const take = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "50"), 1), 100);
+    const skip = Math.max(parseInt(url.searchParams.get("offset") || "0"), 0);
+
+    const [projects, total] = await Promise.all([
+      db.project.findMany({
+        where: { userId: auth.userId },
+        select: {
+          id: true,
+          name: true,
+          path: true,
+          createdAt: true,
+          updatedAt: true,
+          environments: {
+            select: {
+              id: true,
+              name: true,
+              _count: {
+                select: { variables: true },
+              },
             },
           },
         },
-      },
-      orderBy: { updatedAt: "desc" },
-    });
+        orderBy: { updatedAt: "desc" },
+        skip,
+        take,
+      }),
+      db.project.count({ where: { userId: auth.userId } }),
+    ]);
 
     return apiSuccess({
       projects: projects.map((p) => ({
@@ -51,6 +60,7 @@ export async function GET(request: Request) {
           variableCount: e._count.variables,
         })),
       })),
+      pagination: { total, limit: take, offset: skip },
     });
   } catch {
     return apiError("Failed to fetch projects", 500);
