@@ -8,22 +8,22 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypt
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
 const AUTH_TAG_LENGTH = 16;
-const SALT = "secretbox-2fa-encryption"; // Static salt for key derivation
+const SALT_LENGTH = 16;
 
-function getEncryptionKey(): Buffer {
+function deriveKey(salt: Buffer): Buffer {
   const secret = process.env.AUTH_SECRET;
   if (!secret) {
     throw new Error("AUTH_SECRET is not configured");
   }
-  // Derive a 32-byte key from AUTH_SECRET
-  return scryptSync(secret, SALT, 32);
+  return scryptSync(secret, salt, 32);
 }
 
 /**
  * Encrypt a string value for server-side storage
  */
 export function encryptServerSide(plaintext: string): string {
-  const key = getEncryptionKey();
+  const salt = randomBytes(SALT_LENGTH);
+  const key = deriveKey(salt);
   const iv = randomBytes(IV_LENGTH);
 
   const cipher = createCipheriv(ALGORITHM, key, iv);
@@ -33,8 +33,9 @@ export function encryptServerSide(plaintext: string): string {
 
   const authTag = cipher.getAuthTag();
 
-  // Combine IV + AuthTag + Encrypted data
+  // Combine Salt + IV + AuthTag + Encrypted data
   const combined = Buffer.concat([
+    salt,
     iv,
     authTag,
     Buffer.from(encrypted, "base64"),
@@ -47,14 +48,20 @@ export function encryptServerSide(plaintext: string): string {
  * Decrypt a server-side encrypted value
  */
 export function decryptServerSide(encryptedData: string): string {
-  const key = getEncryptionKey();
   const combined = Buffer.from(encryptedData, "base64");
 
-  // Extract IV, AuthTag, and encrypted data
-  const iv = combined.subarray(0, IV_LENGTH);
-  const authTag = combined.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
-  const encrypted = combined.subarray(IV_LENGTH + AUTH_TAG_LENGTH);
+  // Extract Salt, IV, AuthTag, and encrypted data
+  const salt = combined.subarray(0, SALT_LENGTH);
+  const iv = combined.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
+  const authTag = combined.subarray(
+    SALT_LENGTH + IV_LENGTH,
+    SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH
+  );
+  const encrypted = combined.subarray(
+    SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH
+  );
 
+  const key = deriveKey(salt);
   const decipher = createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(authTag);
 

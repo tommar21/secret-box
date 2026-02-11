@@ -341,7 +341,6 @@ export function ProjectView({ project }: ProjectViewProps) {
                       <VariableRow
                         key={variable.id}
                         variable={variable}
-                        envId={env.id}
                         cryptoKey={cryptoKey}
                         isVisible={visibleValues.has(variable.id)}
                         isSelected={selectedVars.has(variable.id)}
@@ -379,7 +378,6 @@ export function ProjectView({ project }: ProjectViewProps) {
 
 const VariableRow = memo(function VariableRow({
   variable,
-  envId,
   cryptoKey,
   isVisible,
   isSelected,
@@ -391,7 +389,6 @@ const VariableRow = memo(function VariableRow({
   onDelete,
 }: {
   variable: DecryptedVar;
-  envId: string;
   cryptoKey: CryptoKey | null;
   isVisible: boolean;
   isSelected: boolean;

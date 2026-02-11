@@ -1,31 +1,26 @@
-"use server";
-
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { logAudit } from "@/lib/audit";
 import bcrypt from "bcryptjs";
+import { z } from "zod";
 
-interface ChangePasswordRequest {
-  currentPasswordHash: string; // Hash of current password for verification
-  newMasterPasswordHash: string; // Hash of new password to store
-  newSalt: string; // New salt for key derivation
-  variables: Array<{
-    id: string;
-    keyEncrypted: string;
-    valueEncrypted: string;
-    ivKey: string;
-    ivValue: string;
-  }>;
-  globalVariables: Array<{
-    id: string;
-    keyEncrypted: string;
-    valueEncrypted: string;
-    ivKey: string;
-    ivValue: string;
-  }>;
-}
+const reEncryptedVariableSchema = z.object({
+  id: z.string().min(1),
+  keyEncrypted: z.string().min(1),
+  valueEncrypted: z.string().min(1),
+  ivKey: z.string().min(1),
+  ivValue: z.string().min(1),
+});
+
+const changePasswordSchema = z.object({
+  currentPasswordHash: z.string().min(1),
+  newMasterPasswordHash: z.string().min(1),
+  newSalt: z.string().min(1),
+  variables: z.array(reEncryptedVariableSchema),
+  globalVariables: z.array(reEncryptedVariableSchema),
+});
 
 export async function POST(req: Request) {
   try {
@@ -35,7 +30,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body: ChangePasswordRequest = await req.json();
+    const parsed = changePasswordSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request data" },
+        { status: 400 }
+      );
+    }
+    const body = parsed.data;
 
     // Verify current user
     const user = await db.user.findUnique({

@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { authenticateApiRequest, hasPermission, apiError, apiSuccess } from "@/lib/api-auth";
 

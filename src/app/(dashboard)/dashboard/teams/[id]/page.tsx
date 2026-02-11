@@ -60,12 +60,6 @@ const roleIcons: Record<TeamRole, React.ReactNode> = {
   VIEWER: <Eye className="h-4 w-4 text-gray-500" />,
 };
 
-const roleLabels: Record<TeamRole, string> = {
-  ADMIN: "Admin",
-  MEMBER: "Member",
-  VIEWER: "Viewer",
-};
-
 export default function TeamDetailPage({
   params,
 }: {
@@ -172,8 +166,6 @@ export default function TeamDetailPage({
   if (!team) {
     return null;
   }
-
-  const isOwner = team.ownerId === team.members.find((m: Member) => m.role === "ADMIN")?.userId;
 
   return (
     <div>
