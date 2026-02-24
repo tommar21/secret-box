@@ -32,6 +32,7 @@ export const AddVariableDialog = memo(function AddVariableDialog({
 }: AddVariableDialogProps) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [keyError, setKeyError] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -96,7 +97,18 @@ export const AddVariableDialog = memo(function AddVariableDialog({
                 placeholder="DATABASE_URL"
                 required
                 disabled={isLoading}
+                maxLength={255}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/\s/.test(val)) setKeyError("Key cannot contain spaces");
+                  else if (val && !/^[A-Za-z_]/.test(val)) setKeyError("Key must start with a letter or underscore");
+                  else setKeyError("");
+                }}
+                aria-describedby={keyError ? "key-error" : undefined}
               />
+              {keyError && (
+                <p id="key-error" className="text-xs text-destructive">{keyError}</p>
+              )}
             </div>
             <div className="space-y-2">
               <label htmlFor="value" className="text-sm font-medium">
@@ -123,7 +135,7 @@ export const AddVariableDialog = memo(function AddVariableDialog({
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isLoading || !cryptoKey}>
+            <Button type="submit" disabled={isLoading || !cryptoKey || !!keyError}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Add Variable
             </Button>
