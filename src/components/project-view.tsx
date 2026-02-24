@@ -16,8 +16,17 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   ArrowLeft,
@@ -39,7 +48,7 @@ import {
 import { useVaultStore } from "@/stores/vault-store";
 import { decryptVariable } from "@/lib/crypto/encryption";
 import { deleteVariable } from "@/lib/actions/variables";
-import { deleteProject, deleteEnvironment } from "@/lib/actions/projects";
+import { deleteProject, deleteEnvironment, updateProject } from "@/lib/actions/projects";
 import { ImportEnvDialog } from "@/components/import-env-dialog";
 import { EditVariableDialog } from "@/components/dialogs/edit-variable-dialog";
 import { AddVariableDialog } from "@/components/dialogs/add-variable-dialog";
@@ -76,6 +85,9 @@ export function ProjectView({ project }: ProjectViewProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState(project.name);
+  const [isRenaming, setIsRenaming] = useState(false);
   const { confirm, ConfirmDialog } = useConfirm();
 
   // Use custom hooks for toggle sets and clipboard
@@ -158,6 +170,24 @@ export function ProjectView({ project }: ProjectViewProps) {
     }
   }
 
+  async function handleRenameProject() {
+    if (!editName.trim() || editName.trim() === project.name) {
+      setIsEditingName(false);
+      return;
+    }
+    setIsRenaming(true);
+    try {
+      await updateProject(project.id, { name: editName.trim() });
+      toast.success("Project renamed");
+      setIsEditingName(false);
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to rename project");
+    } finally {
+      setIsRenaming(false);
+    }
+  }
+
   // Helper functions using the hooks
   const selectAllVars = useCallback(() => {
     const currentVars = decryptedVars[activeEnv] || [];
@@ -228,6 +258,13 @@ export function ProjectView({ project }: ProjectViewProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => { setEditName(project.name); setIsEditingName(true); }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit Name
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive"
                 onClick={handleDeleteProject}
@@ -456,6 +493,34 @@ export function ProjectView({ project }: ProjectViewProps) {
       </Tabs>
 
       <ConfirmDialog />
+
+      <Dialog open={isEditingName} onOpenChange={setIsEditingName}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Project</DialogTitle>
+            <DialogDescription>Enter a new name for this project.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-4">
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              maxLength={50}
+              placeholder="Project name"
+              onKeyDown={(e) => { if (e.key === "Enter") handleRenameProject(); }}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditingName(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRenameProject} disabled={isRenaming || !editName.trim()}>
+              {isRenaming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
