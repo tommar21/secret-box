@@ -19,7 +19,7 @@ const csp = [
 
 // Export as proxy function (Next.js 16+ convention)
 // Handles route protection and sets Content-Security-Policy headers
-export const proxy = auth((req) => {
+export const proxy = auth((_req) => {
   const response = NextResponse.next();
   response.headers.set("Content-Security-Policy", csp);
   return response;
