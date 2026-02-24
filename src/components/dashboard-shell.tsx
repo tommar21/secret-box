@@ -98,7 +98,7 @@ const Sidebar = memo(function Sidebar({
       <div className="flex h-full flex-col">
         {/* Logo */}
         <div className="flex h-16 items-center justify-between gap-2 border-b px-4">
-          <Link href="/" className="flex items-center gap-2 transition-transform hover:scale-105">
+          <Link href="/dashboard" className="flex items-center gap-2 transition-transform hover:scale-105">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
               <Lock className="h-5 w-5 text-white" />
             </div>
