@@ -214,7 +214,7 @@ export function ProjectView({ project }: ProjectViewProps) {
             <ArrowLeft className="h-4 w-4" />
             Back to projects
           </Link>
-          <h1 className="text-2xl font-bold md:text-3xl">{project.name}</h1>
+          <h1 className="text-2xl font-bold md:text-3xl truncate">{project.name}</h1>
           {project.path && (
             <p className="text-sm text-muted-foreground">{project.path}</p>
           )}

@@ -68,9 +68,9 @@ export default async function DashboardPage() {
               <Link key={project.id} href={`/dashboard/projects/${project.id}`}>
                 <Card className="transition-colors hover:border-primary">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FolderKey className="h-5 w-5" />
-                      {project.name}
+                    <CardTitle className="flex items-center gap-2 min-w-0">
+                      <FolderKey className="h-5 w-5 shrink-0" />
+                      <span className="truncate">{project.name}</span>
                     </CardTitle>
                     <CardDescription>
                       {project.environments.length} environments &middot;{" "}
