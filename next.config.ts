@@ -63,6 +63,7 @@ const nextConfig: NextConfig = {
   },
   // Improve security by not exposing Next.js version
   poweredByHeader: false,
+  output: "standalone",
 };
 
 export default nextConfig;

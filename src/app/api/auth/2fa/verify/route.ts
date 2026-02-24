@@ -7,6 +7,7 @@ import { logAudit } from "@/lib/audit";
 import { totpCodeSchema, validateInput } from "@/lib/validation/schemas";
 import { hashBackupCode } from "@/lib/backup-codes";
 import { decryptServerSide } from "@/lib/crypto/server-encryption";
+import { twoFALimiter, checkRateLimit, rateLimitHeaders, formatRetryTime } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
@@ -14,6 +15,14 @@ export async function POST(req: Request) {
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = await checkRateLimit(twoFALimiter, `2fa:${session.user.id}`);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: `Too many attempts. Please try again in ${formatRetryTime(rateLimit.reset!)}` },
+        { status: 429, headers: rateLimitHeaders(rateLimit.remaining ?? 0, rateLimit.reset ?? 0) }
+      );
     }
 
     // Parse and validate input

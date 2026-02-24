@@ -1,9 +1,4 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -11,38 +6,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Users, Plus, Loader2, FolderKey, ChevronRight } from "lucide-react";
-import { createTeam, getTeams } from "@/lib/actions/teams";
-import { toast } from "sonner";
+import { Users, FolderKey, ChevronRight } from "lucide-react";
+import { getTeams } from "@/lib/actions/teams";
+import { CreateTeamDialog } from "./teams-client";
 
-type Team = Awaited<ReturnType<typeof getTeams>>[number];
-
-export default function TeamsPage() {
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadTeams() {
-      try {
-        const data = await getTeams();
-        setTeams(data);
-      } catch {
-        toast.error("Failed to load teams");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadTeams();
-  }, []);
+export default async function TeamsPage() {
+  const teams = await getTeams();
 
   return (
     <div>
@@ -53,16 +22,10 @@ export default function TeamsPage() {
             Collaborate on projects with your team
           </p>
         </div>
-        <CreateTeamDialog
-          onSuccess={(team) => setTeams((prev) => [team, ...prev])}
-        />
+        <CreateTeamDialog />
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : teams.length === 0 ? (
+      {teams.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Users className="h-12 w-12 text-muted-foreground" />
@@ -72,14 +35,7 @@ export default function TeamsPage() {
               <br />
               on your environment variables.
             </p>
-            <CreateTeamDialog
-              onSuccess={(team) => setTeams((prev) => [team, ...prev])}
-            >
-              <Button className="mt-4">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Your First Team
-              </Button>
-            </CreateTeamDialog>
+            <CreateTeamDialog variant="empty-state" />
           </CardContent>
         </Card>
       ) : (
@@ -114,78 +70,5 @@ export default function TeamsPage() {
         </div>
       )}
     </div>
-  );
-}
-
-function CreateTeamDialog({
-  onSuccess,
-  children,
-}: {
-  onSuccess: (team: Team) => void;
-  children?: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setIsLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
-
-    try {
-      const team = await createTeam({ name });
-      toast.success("Team created");
-      setOpen(false);
-      onSuccess(team as Team);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create team");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children || (
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            New Team
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create Team</DialogTitle>
-          <DialogDescription>
-            Create a new team to collaborate on projects.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium">
-                Team Name
-              </label>
-              <Input
-                id="name"
-                name="name"
-                placeholder="Engineering"
-                required
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Team
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }

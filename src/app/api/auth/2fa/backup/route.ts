@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { verifyBackupCode, removeBackupCode } from "@/lib/backup-codes";
 import { logAudit } from "@/lib/audit";
 import { backupCodeSchema, validateInput } from "@/lib/validation/schemas";
+import { twoFALimiter, checkRateLimitStrict, rateLimitHeaders, formatRetryTime } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
@@ -12,6 +13,15 @@ export async function POST(req: Request) {
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Strict rate limiting: backup codes have limited entropy — fail closed on Redis errors
+    const rateLimit = await checkRateLimitStrict(twoFALimiter, `2fa-backup:${session.user.id}`);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: `Too many attempts. Please try again in ${formatRetryTime(rateLimit.reset!)}` },
+        { status: 429, headers: rateLimitHeaders(rateLimit.remaining ?? 0, rateLimit.reset ?? 0) }
+      );
     }
 
     const body = await req.json();

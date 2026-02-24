@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { logAudit } from "@/lib/audit";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { changeMasterPasswordLimiter, checkRateLimit, rateLimitHeaders, formatRetryTime } from "@/lib/rate-limit";
 
 const reEncryptedVariableSchema = z.object({
   id: z.string().min(1),
@@ -28,6 +29,14 @@ export async function POST(req: Request) {
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = await checkRateLimit(changeMasterPasswordLimiter, `change-mp:${session.user.id}`);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: `Too many attempts. Please try again in ${formatRetryTime(rateLimit.reset!)}` },
+        { status: 429, headers: rateLimitHeaders(rateLimit.remaining ?? 0, rateLimit.reset ?? 0) }
+      );
     }
 
     const parsed = changePasswordSchema.safeParse(await req.json());

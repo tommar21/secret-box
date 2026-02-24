@@ -52,6 +52,26 @@ export const apiTokenLimiter = redis
     })
   : null;
 
+// Rate limiter for 2FA operations - 5 attempts per 15 minutes per user
+export const twoFALimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, "15 m"),
+      analytics: true,
+      prefix: "ratelimit:2fa",
+    })
+  : null;
+
+// Rate limiter for master password change - 3 attempts per 15 minutes per user
+export const changeMasterPasswordLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(3, "15 m"),
+      analytics: true,
+      prefix: "ratelimit:change-master-password",
+    })
+  : null;
+
 // Helper to get IP from request
 export function getClientIp(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for");
@@ -109,6 +129,43 @@ export async function checkRateLimit(
     // Rate limiting is defense-in-depth; auth + bcrypt are the primary controls.
     console.error("[Rate Limit] Redis error, failing open:", error);
     return { success: true };
+  }
+}
+
+// Like checkRateLimit but fails CLOSED when Redis is unavailable.
+// Use for high-value endpoints (e.g., backup codes) where brute-force risk
+// outweighs the inconvenience of brief unavailability.
+export async function checkRateLimitStrict(
+  limiter: Ratelimit | null,
+  identifier: string
+): Promise<{ success: boolean; remaining?: number; reset?: number }> {
+  if (!limiter) {
+    if (isProduction) {
+      console.error("[Rate Limit] CRITICAL: Strict rate limiting not configured in production!");
+    }
+    return { success: true };
+  }
+
+  try {
+    try {
+      const status = await limiter.getRemaining(identifier);
+      if (status.remaining <= 0) {
+        return { success: false, remaining: 0, reset: status.reset };
+      }
+    } catch {
+      // getRemaining may not be available in all versions - fall through to limit()
+    }
+
+    const result = await limiter.limit(identifier);
+    return {
+      success: result.success,
+      remaining: result.remaining,
+      reset: result.reset,
+    };
+  } catch (error) {
+    // Fail closed — Redis unavailable means we can't safely allow access
+    console.error("[Rate Limit] Redis error in strict mode, failing closed:", error);
+    return { success: false };
   }
 }
 

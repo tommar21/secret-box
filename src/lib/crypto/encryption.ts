@@ -8,7 +8,7 @@
 
 const ALGORITHM = "AES-GCM";
 const KEY_LENGTH = 256;
-const ITERATIONS = 100000;
+const ITERATIONS = 600000;
 const SALT_LENGTH = 16;
 const IV_LENGTH = 12;
 
