@@ -6,7 +6,7 @@ import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
 
 const fadeIn = {
@@ -29,6 +29,15 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [shake, setShake] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  function validateEmail(value: string) {
+    if (value.length > 254) return "Email cannot exceed 254 characters";
+    if (value.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+      return "Invalid email format";
+    return "";
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,6 +47,13 @@ export default function LoginPage() {
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
+
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      setEmailError(emailErr);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       // First, validate credentials with rate limiting
@@ -120,6 +136,7 @@ export default function LoginPage() {
         className="space-y-4"
         variants={fadeIn}
         custom={1}
+        noValidate
       >
         <motion.div
           className="space-y-2"
@@ -137,9 +154,15 @@ export default function LoginPage() {
               placeholder="you@example.com"
               required
               disabled={isLoading}
-              className="h-11 transition-shadow focus:shadow-md"
+              maxLength={254}
+              onBlur={(e) => setEmailError(validateEmail(e.target.value))}
+              onChange={(e) => { if (emailError) setEmailError(validateEmail(e.target.value)); }}
+              className={`h-11 transition-shadow focus:shadow-md ${emailError ? "border-destructive" : ""}`}
             />
           </motion.div>
+          {emailError && (
+            <p className="text-xs text-destructive">{emailError}</p>
+          )}
         </motion.div>
 
         <motion.div
@@ -151,15 +174,27 @@ export default function LoginPage() {
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
           </div>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            disabled={isLoading}
-            className="h-11 transition-shadow focus:shadow-md"
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              required
+              disabled={isLoading}
+              maxLength={128}
+              className="h-11 pr-11 transition-shadow focus:shadow-md"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+              tabIndex={-1}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
         </motion.div>
 
         <motion.div
@@ -172,7 +207,7 @@ export default function LoginPage() {
           <Button
             type="submit"
             className="h-11 w-full"
-            disabled={isLoading}
+            disabled={isLoading || !!emailError}
           >
             {isLoading ? (
               <motion.span
