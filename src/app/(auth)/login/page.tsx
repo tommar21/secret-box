@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { validateEmail } from "@/lib/validation/client-schemas";
 
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
@@ -31,13 +32,6 @@ export default function LoginPage() {
   const [shake, setShake] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
-  function validateEmail(value: string) {
-    if (value.length > 254) return "Email cannot exceed 254 characters";
-    if (value.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
-      return "Invalid email format";
-    return "";
-  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -118,17 +112,20 @@ export default function LoginPage() {
       </motion.div>
 
       {/* Error message */}
-      {error && (
-        <motion.div
-          className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={shake ? "shake" : { opacity: 1, scale: 1 }}
-          variants={shakeAnimation}
-        >
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>{error}</span>
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive"
+            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            animate={shake ? "shake" : { opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            variants={shakeAnimation}
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Form */}
       <motion.form

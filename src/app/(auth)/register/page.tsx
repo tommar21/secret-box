@@ -12,6 +12,7 @@ import {
   validateMasterPassword,
   calculatePasswordStrength,
 } from "@/lib/crypto/encryption";
+import { validateName, validateEmail } from "@/lib/validation/client-schemas";
 
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
@@ -44,23 +45,6 @@ export default function RegisterPage() {
 
   const strengthLabel = passwordStrength < 25 ? "Weak" : passwordStrength < 50 ? "Fair" : passwordStrength < 75 ? "Good" : "Strong";
   const strengthColor = passwordStrength < 25 ? "text-red-500" : passwordStrength < 50 ? "text-yellow-500" : passwordStrength < 75 ? "text-green-500" : "text-green-600";
-
-  const NAME_REGEX = /^(?=.*\p{L})[\p{L}\s\-']+$/u;
-
-  function validateName(value: string) {
-    if (value.length > 50) return "Name cannot exceed 50 characters";
-    if (value.length > 0 && value.length < 2) return "Name must be at least 2 characters";
-    if (value.length > 0 && !NAME_REGEX.test(value))
-      return "Only letters, spaces, hyphens, and apostrophes allowed";
-    return "";
-  }
-
-  function validateEmail(value: string) {
-    if (value.length > 254) return "Email cannot exceed 254 characters";
-    if (value.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
-      return "Invalid email format";
-    return "";
-  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
