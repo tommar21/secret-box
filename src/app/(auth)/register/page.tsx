@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Check, X, AlertCircle, AlertTriangle } from "lucide-react";
+import { Loader2, Check, X, AlertCircle, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   validateMasterPassword,
@@ -32,6 +32,11 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [masterPassword, setMasterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showMasterPassword, setShowMasterPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const passwordValidation = validateMasterPassword(masterPassword);
   const passwordStrength = calculatePasswordStrength(masterPassword);
@@ -39,6 +44,22 @@ export default function RegisterPage() {
 
   const strengthLabel = passwordStrength < 25 ? "Weak" : passwordStrength < 50 ? "Fair" : passwordStrength < 75 ? "Good" : "Strong";
   const strengthColor = passwordStrength < 25 ? "text-red-500" : passwordStrength < 50 ? "text-yellow-500" : passwordStrength < 75 ? "text-green-500" : "text-green-600";
+
+  const NAME_REGEX = /^(?=.*\p{L})[\p{L}\s\-']+$/u;
+
+  function validateName(value: string) {
+    if (value.length > 50) return "Name cannot exceed 50 characters";
+    if (value.length > 0 && !NAME_REGEX.test(value))
+      return "Only letters, spaces, hyphens, and apostrophes allowed";
+    return "";
+  }
+
+  function validateEmail(value: string) {
+    if (value.length > 254) return "Email cannot exceed 254 characters";
+    if (value.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+      return "Invalid email format";
+    return "";
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -49,6 +70,11 @@ export default function RegisterPage() {
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
+
+    const nameErr = validateName(name);
+    const emailErr = validateEmail(email);
+    if (nameErr) { setNameError(nameErr); setIsLoading(false); return; }
+    if (emailErr) { setEmailError(emailErr); setIsLoading(false); return; }
 
     if (!passwordValidation.valid) {
       setError(passwordValidation.errors.join(". "));
@@ -129,7 +155,7 @@ export default function RegisterPage() {
       </AnimatePresence>
 
       {/* Form */}
-      <motion.form onSubmit={handleSubmit} className="space-y-4" variants={fadeIn}>
+      <motion.form onSubmit={handleSubmit} className="space-y-4" variants={fadeIn} noValidate>
         <motion.div
           className="grid gap-4 sm:grid-cols-2"
           initial={{ opacity: 0, y: 20 }}
@@ -146,8 +172,13 @@ export default function RegisterPage() {
               placeholder="John Doe"
               required
               disabled={isLoading}
-              className="h-11 transition-shadow focus:shadow-md"
+              maxLength={50}
+              onChange={(e) => setNameError(validateName(e.target.value))}
+              className={`h-11 transition-shadow focus:shadow-md ${nameError ? "border-destructive" : ""}`}
             />
+            {nameError && (
+              <p className="text-xs text-destructive">{nameError}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -160,8 +191,14 @@ export default function RegisterPage() {
               placeholder="you@example.com"
               required
               disabled={isLoading}
-              className="h-11 transition-shadow focus:shadow-md"
+              maxLength={254}
+              onBlur={(e) => setEmailError(validateEmail(e.target.value))}
+              onChange={(e) => { if (emailError) setEmailError(validateEmail(e.target.value)); }}
+              className={`h-11 transition-shadow focus:shadow-md ${emailError ? "border-destructive" : ""}`}
             />
+            {emailError && (
+              <p className="text-xs text-destructive">{emailError}</p>
+            )}
           </div>
         </motion.div>
 
@@ -172,16 +209,28 @@ export default function RegisterPage() {
           transition={{ delay: 0.2 }}
         >
           <Label htmlFor="password">Account Password</Label>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            placeholder="Used to log in"
-            required
-            disabled={isLoading}
-            className="h-11 transition-shadow focus:shadow-md"
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              placeholder="Used to log in"
+              required
+              disabled={isLoading}
+              maxLength={128}
+              className="h-11 pr-11 transition-shadow focus:shadow-md"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+              tabIndex={-1}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           <p className="text-xs text-muted-foreground">
             This is your login password (different from master password)
           </p>
@@ -216,18 +265,30 @@ export default function RegisterPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="masterPassword">Master Password</Label>
-              <Input
-                id="masterPassword"
-                name="masterPassword"
-                type="password"
-                autoComplete="off"
-                placeholder="Strong encryption password"
-                required
-                disabled={isLoading}
-                value={masterPassword}
-                onChange={(e) => setMasterPassword(e.target.value)}
-                className="h-11 transition-shadow focus:shadow-md"
-              />
+              <div className="relative">
+                <Input
+                  id="masterPassword"
+                  name="masterPassword"
+                  type={showMasterPassword ? "text" : "password"}
+                  autoComplete="off"
+                  placeholder="Strong encryption password"
+                  required
+                  disabled={isLoading}
+                  maxLength={128}
+                  value={masterPassword}
+                  onChange={(e) => setMasterPassword(e.target.value)}
+                  className="h-11 pr-11 transition-shadow focus:shadow-md"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowMasterPassword((v) => !v)}
+                  className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                  aria-label={showMasterPassword ? "Hide master password" : "Show master password"}
+                >
+                  {showMasterPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
 
               {/* Password strength indicator */}
               <AnimatePresence>
@@ -303,18 +364,30 @@ export default function RegisterPage() {
               transition={{ delay: 0.35 }}
             >
               <Label htmlFor="confirmMasterPassword">Confirm Master Password</Label>
-              <Input
-                id="confirmMasterPassword"
-                name="confirmMasterPassword"
-                type="password"
-                autoComplete="off"
-                placeholder="Confirm your master password"
-                required
-                disabled={isLoading}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="h-11 transition-shadow focus:shadow-md"
-              />
+              <div className="relative">
+                <Input
+                  id="confirmMasterPassword"
+                  name="confirmMasterPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="off"
+                  placeholder="Confirm your master password"
+                  required
+                  disabled={isLoading}
+                  maxLength={128}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="h-11 pr-11 transition-shadow focus:shadow-md"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                  aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               <AnimatePresence>
                 {confirmPassword && (
                   <motion.div
@@ -348,7 +421,7 @@ export default function RegisterPage() {
           <Button
             type="submit"
             className="h-11 w-full"
-            disabled={isLoading || !passwordValidation.valid || !passwordsMatch}
+            disabled={isLoading || !passwordValidation.valid || !passwordsMatch || !!nameError || !!emailError}
           >
             {isLoading ? (
               <motion.span
