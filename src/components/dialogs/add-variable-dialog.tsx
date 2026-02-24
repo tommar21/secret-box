@@ -118,7 +118,6 @@ export const AddVariableDialog = memo(function AddVariableDialog({
                 id="value"
                 name="value"
                 placeholder="postgresql://..."
-                required
                 disabled={isLoading}
               />
             </div>
