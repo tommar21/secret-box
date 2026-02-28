@@ -22,7 +22,7 @@ const KNOWN_ERRORS = [
   "Team not found",
   "Team not found or you don't have permission",
   "Team not found or you're not the owner",
-  "User not found with this email",
+  "This user is not registered in My Secret Box.",
   "User is already a member of this team",
   "Member not found",
   "Cannot remove the team owner",
@@ -219,7 +219,7 @@ export async function inviteMember(data: InviteMemberInput) {
     });
 
     if (!user) {
-      throw new Error("User not found with this email");
+      throw new Error("This user is not registered in My Secret Box.");
     }
 
     // Check if already a member
