@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProject } from "@/lib/actions/projects";
+import { getGlobalVariables } from "@/lib/actions/variables";
 import { ProjectView } from "@/components/project-view";
 
 interface ProjectPageProps {
@@ -9,11 +10,14 @@ interface ProjectPageProps {
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const { id } = await params;
 
-  const project = await getProject(id).catch(() => null);
+  const [project, globals] = await Promise.all([
+    getProject(id).catch(() => null),
+    getGlobalVariables().catch(() => []),
+  ]);
 
   if (!project) {
     notFound();
   }
 
-  return <ProjectView project={project} />;
+  return <ProjectView project={project} globals={globals} />;
 }

@@ -44,6 +44,7 @@ import {
   FileCode,
   Search,
   X,
+  Key,
 } from "lucide-react";
 import { useVaultStore } from "@/stores/vault-store";
 import { decryptVariable } from "@/lib/crypto/encryption";
@@ -73,11 +74,30 @@ function formatTimeAgo(date: Date): string {
   return `${Math.floor(days / 30)}mo ago`;
 }
 
-interface ProjectViewProps {
-  project: ProjectWithRelations;
+interface RawGlobal {
+  id: string;
+  keyEncrypted: string;
+  valueEncrypted: string;
+  ivKey: string;
+  ivValue: string;
+  isSecret: boolean;
+  updatedAt: Date;
 }
 
-export function ProjectView({ project }: ProjectViewProps) {
+interface DecryptedGlobal {
+  id: string;
+  key: string;
+  value: string;
+  isSecret: boolean;
+  updatedAt: Date;
+}
+
+interface ProjectViewProps {
+  project: ProjectWithRelations;
+  globals?: RawGlobal[];
+}
+
+export function ProjectView({ project, globals = [] }: ProjectViewProps) {
   const router = useRouter();
   const cryptoKey = useVaultStore((state) => state.cryptoKey);
   const [activeEnv, setActiveEnv] = useState(project.environments[0]?.id || "");
@@ -90,9 +110,12 @@ export function ProjectView({ project }: ProjectViewProps) {
   const [isRenaming, setIsRenaming] = useState(false);
   const { confirm, ConfirmDialog } = useConfirm();
 
+  const [decryptedGlobals, setDecryptedGlobals] = useState<DecryptedGlobal[]>([]);
+
   // Use custom hooks for toggle sets and clipboard
   const visibleValues = useToggleSet<string>();
   const selectedVars = useToggleSet<string>();
+  const globalVisible = useToggleSet<string>();
   const clipboard = useCopyToClipboard();
 
   // Decrypt variables for an environment - memoized to prevent unnecessary re-renders
@@ -146,6 +169,25 @@ export function ProjectView({ project }: ProjectViewProps) {
       decryptEnvVariables(activeEnv);
     }
   }, [activeEnv, cryptoKey, decryptEnvVariables, decryptedVars]);
+
+  // Decrypt globals when cryptoKey becomes available
+  useEffect(() => {
+    if (!cryptoKey || globals.length === 0) return;
+    Promise.all(
+      globals.map(async (g) => {
+        const { key, value } = await decryptVariable(
+          g.keyEncrypted,
+          g.valueEncrypted,
+          g.ivKey,
+          g.ivValue,
+          cryptoKey
+        );
+        return { id: g.id, key, value, isSecret: g.isSecret, updatedAt: g.updatedAt };
+      })
+    )
+      .then(setDecryptedGlobals)
+      .catch(() => {});
+  }, [cryptoKey, globals]);
 
   async function handleDeleteProject() {
     const confirmed = await confirm({
@@ -489,6 +531,79 @@ export function ProjectView({ project }: ProjectViewProps) {
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* Global Variables */}
+      {globals.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Key className="h-5 w-5" />
+              Global Variables
+            </CardTitle>
+            <CardDescription>
+              {globals.length} global variable{globals.length !== 1 ? "s" : ""} — available across all your projects
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {decryptedGlobals.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <p className="mt-2 text-sm text-muted-foreground">Decrypting globals...</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {decryptedGlobals.map((g) => (
+                  <div
+                    key={g.id}
+                    className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex flex-1 flex-col gap-1 overflow-hidden md:flex-row md:items-center md:gap-4">
+                      <div className="min-w-0 md:flex-1">
+                        <code className="inline-block max-w-full truncate rounded bg-muted/50 px-2 py-1 text-sm font-semibold">
+                          {g.key}
+                        </code>
+                      </div>
+                      <div className="min-w-0 md:flex-1 overflow-hidden">
+                        <code className="block truncate text-sm text-muted-foreground font-mono">
+                          {g.isSecret && !globalVisible.has(g.id) ? "••••••••••••" : g.value}
+                        </code>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {g.isSecret && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => globalVisible.toggle(g.id)}
+                          className="h-8 w-8"
+                        >
+                          {globalVisible.has(g.id) ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => clipboard.copy(g.value, g.id)}
+                        className={`h-8 w-8 transition-all ${clipboard.isCopied(g.id) ? "text-green-500" : ""}`}
+                      >
+                        {clipboard.isCopied(g.id) ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <ConfirmDialog />
 
