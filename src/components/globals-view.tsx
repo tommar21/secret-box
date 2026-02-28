@@ -390,8 +390,15 @@ const EditGlobalDialog = memo(function EditGlobalDialog({
 
     setIsLoading(true);
 
+    const trimmedKey = key.trim();
+    const trimmedValue = value.trim();
+    if (!trimmedKey || !trimmedValue) {
+      toast.error("Key and Value are required");
+      return;
+    }
+
     try {
-      const encrypted = await encryptVariable(key, value, cryptoKey);
+      const encrypted = await encryptVariable(trimmedKey, trimmedValue, cryptoKey);
 
       await updateGlobalVariable(variable.id, {
         ...encrypted,
@@ -402,8 +409,8 @@ const EditGlobalDialog = memo(function EditGlobalDialog({
       onOpenChange(false);
       onSuccess({
         id: variable.id,
-        key,
-        value,
+        key: trimmedKey,
+        value: trimmedValue,
         isSecret,
         linkedProjects: variable.linkedProjects,
       });
@@ -439,7 +446,11 @@ const EditGlobalDialog = memo(function EditGlobalDialog({
                 placeholder="OPENAI_API_KEY"
                 required
                 disabled={isLoading}
+                maxLength={255}
               />
+              <div className="flex justify-end text-xs text-muted-foreground">
+                <span>{key.length}/255</span>
+              </div>
             </div>
             <div className="space-y-2">
               <label htmlFor="edit-global-value" className="text-sm font-medium">
@@ -448,11 +459,15 @@ const EditGlobalDialog = memo(function EditGlobalDialog({
               <Input
                 id="edit-global-value"
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
+                onChange={(e) => setValue(e.target.value.trimStart())}
                 placeholder="sk-..."
                 required
                 disabled={isLoading}
+                maxLength={500}
               />
+              <div className="flex justify-end text-xs text-muted-foreground">
+                <span>{value.length}/500</span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -491,16 +506,24 @@ const AddGlobalDialog = memo(function AddGlobalDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [addKeyValue, setAddKeyValue] = useState("");
+  const [addGlobalValue, setAddGlobalValue] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!cryptoKey) return;
 
+    const key = addKeyValue.trim();
+    const value = addGlobalValue.trim();
+
+    if (!key || !value) {
+      toast.error("Key and Value are required");
+      return;
+    }
+
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const key = formData.get("key") as string;
-    const value = formData.get("value") as string;
     const isSecret = formData.get("isSecret") === "on";
 
     try {
@@ -512,6 +535,8 @@ const AddGlobalDialog = memo(function AddGlobalDialog({
       });
 
       toast.success("Global variable added");
+      setAddKeyValue("");
+      setAddGlobalValue("");
       setOpen(false);
       onSuccess({
         id: created.id,
@@ -552,10 +577,16 @@ const AddGlobalDialog = memo(function AddGlobalDialog({
               <Input
                 id="key"
                 name="key"
+                value={addKeyValue}
+                onChange={(e) => setAddKeyValue(e.target.value)}
                 placeholder="OPENAI_API_KEY"
                 required
                 disabled={isLoading}
+                maxLength={255}
               />
+              <div className="flex justify-end text-xs text-muted-foreground">
+                <span>{addKeyValue.length}/255</span>
+              </div>
             </div>
             <div className="space-y-2">
               <label htmlFor="value" className="text-sm font-medium">
@@ -564,10 +595,16 @@ const AddGlobalDialog = memo(function AddGlobalDialog({
               <Input
                 id="value"
                 name="value"
+                value={addGlobalValue}
+                onChange={(e) => setAddGlobalValue(e.target.value.trimStart())}
                 placeholder="sk-..."
                 required
                 disabled={isLoading}
+                maxLength={500}
               />
+              <div className="flex justify-end text-xs text-muted-foreground">
+                <span>{addGlobalValue.length}/500</span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <input
