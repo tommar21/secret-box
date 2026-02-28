@@ -200,14 +200,6 @@ export function GlobalsView({ globals }: GlobalsViewProps) {
               Global variables are shared across all your projects.
               Perfect for API keys and secrets you use everywhere.
             </p>
-            <div className="mt-6">
-              <AddGlobalDialog
-                cryptoKey={cryptoKey}
-                onSuccess={(newGlobal) => {
-                  setDecryptedGlobals((prev) => [newGlobal, ...prev]);
-                }}
-              />
-            </div>
           </CardContent>
         </Card>
       ) : (
