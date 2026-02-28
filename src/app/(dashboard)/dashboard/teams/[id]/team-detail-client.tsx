@@ -343,6 +343,7 @@ function InviteMemberDialog({
                 placeholder="colleague@example.com"
                 required
                 disabled={isLoading}
+                maxLength={254}
               />
             </div>
             <div className="space-y-2">

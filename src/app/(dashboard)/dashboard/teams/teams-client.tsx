@@ -68,6 +68,7 @@ export function CreateTeamDialog() {
                 placeholder="Engineering"
                 required
                 disabled={isLoading}
+                maxLength={50}
               />
             </div>
           </div>

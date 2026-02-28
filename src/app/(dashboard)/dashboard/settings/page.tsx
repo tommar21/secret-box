@@ -473,6 +473,7 @@ function ChangeMasterPasswordDialog() {
                   type="password"
                   required
                   disabled={isLoading}
+                  maxLength={128}
                 />
               </div>
               <div className="space-y-2">
@@ -485,6 +486,7 @@ function ChangeMasterPasswordDialog() {
                   type="password"
                   required
                   disabled={isLoading}
+                  maxLength={128}
                 />
                 <p className="text-xs text-muted-foreground">
                   At least 12 characters with uppercase, lowercase, and numbers
@@ -500,6 +502,7 @@ function ChangeMasterPasswordDialog() {
                   type="password"
                   required
                   disabled={isLoading}
+                  maxLength={128}
                 />
               </div>
             </div>
