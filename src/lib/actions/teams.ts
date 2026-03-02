@@ -307,6 +307,7 @@ export async function respondToInvite(inviteId: string, accept: boolean) {
 
     revalidatePath("/dashboard/teams");
     revalidatePath("/dashboard/invites");
+    revalidatePath("/dashboard", "layout");
   } catch (error) {
     if (isKnownError(error)) throw error;
     throw new Error("Failed to respond to invite");
@@ -318,9 +319,9 @@ export async function removeMember(teamId: string, memberId: string) {
     const userId = await requireAuth();
     const team = await requireTeamAdminAccess(teamId, userId);
 
-    // Can't remove the owner
-    const member = await db.teamMember.findUnique({
-      where: { id: memberId },
+    // Can't remove the owner — scope memberId to teamId to prevent IDOR
+    const member = await db.teamMember.findFirst({
+      where: { id: memberId, teamId },
       include: { user: true },
     });
 
@@ -359,6 +360,12 @@ export async function updateMemberRole(
   try {
     const userId = await requireAuth();
     await requireTeamAdminAccess(teamId, userId);
+
+    // Verify memberId belongs to this team before updating (prevent IDOR)
+    const existing = await db.teamMember.findFirst({
+      where: { id: memberId, teamId },
+    });
+    if (!existing) throw new Error("Member not found");
 
     const member = await db.teamMember.update({
       where: { id: memberId },
