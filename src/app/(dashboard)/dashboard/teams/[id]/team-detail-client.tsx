@@ -436,12 +436,16 @@ function InviteMemberDialog({ teamId }: { teamId: string }) {
     const email = formData.get("email") as string;
 
     try {
-      await inviteMember({ teamId, email, role });
+      const result = await inviteMember({ teamId, email, role });
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Invitation sent — waiting for user to accept");
       setEmailValue("");
       setOpen(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to invite member");
+    } catch {
+      toast.error("Failed to invite member");
     } finally {
       setIsLoading(false);
     }

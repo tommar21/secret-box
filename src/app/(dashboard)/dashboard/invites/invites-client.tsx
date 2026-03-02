@@ -15,12 +15,14 @@ import { toast } from "sonner";
 
 type Invite = Awaited<ReturnType<typeof getPendingInvites>>[number];
 
+type LoadingState = { id: string; action: "accept" | "decline" } | null;
+
 export function InvitesClient({ initialInvites }: { initialInvites: Invite[] }) {
   const [invites, setInvites] = useState<Invite[]>(initialInvites);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState<LoadingState>(null);
 
   async function handleRespond(inviteId: string, accept: boolean) {
-    setLoadingId(inviteId);
+    setLoading({ id: inviteId, action: accept ? "accept" : "decline" });
     try {
       await respondToInvite(inviteId, accept);
       setInvites((prev) => prev.filter((i) => i.id !== inviteId));
@@ -28,7 +30,7 @@ export function InvitesClient({ initialInvites }: { initialInvites: Invite[] }) 
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to respond to invite");
     } finally {
-      setLoadingId(null);
+      setLoading(null);
     }
   }
 
@@ -69,10 +71,10 @@ export function InvitesClient({ initialInvites }: { initialInvites: Invite[] }) 
                   size="sm"
                   variant="outline"
                   onClick={() => handleRespond(invite.id, false)}
-                  disabled={!!loadingId}
+                  disabled={!!loading}
                   className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
                 >
-                  {loadingId === invite.id ? (
+                  {loading?.id === invite.id && loading.action === "decline" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <X className="mr-1 h-4 w-4" />
@@ -82,9 +84,9 @@ export function InvitesClient({ initialInvites }: { initialInvites: Invite[] }) 
                 <Button
                   size="sm"
                   onClick={() => handleRespond(invite.id, true)}
-                  disabled={!!loadingId}
+                  disabled={!!loading}
                 >
-                  {loadingId === invite.id ? (
+                  {loading?.id === invite.id && loading.action === "accept" ? (
                     <Loader2 className="mr-1 h-4 w-4 animate-spin" />
                   ) : (
                     <Check className="mr-1 h-4 w-4" />

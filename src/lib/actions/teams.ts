@@ -209,7 +209,7 @@ export async function getTeam(teamId: string) {
   }
 }
 
-export async function inviteMember(data: InviteMemberInput) {
+export async function inviteMember(data: InviteMemberInput): Promise<{ error?: string }> {
   try {
     const userId = await requireAuth();
     await requireTeamAdminAccess(data.teamId, userId);
@@ -257,9 +257,10 @@ export async function inviteMember(data: InviteMemberInput) {
 
     revalidatePath(`/dashboard/teams/${data.teamId}`);
     revalidatePath("/dashboard/invites");
+    return {};
   } catch (error) {
-    if (isKnownError(error)) throw error;
-    throw new Error("Failed to invite member");
+    if (isKnownError(error)) return { error: (error as Error).message };
+    return { error: "Failed to invite member" };
   }
 }
 

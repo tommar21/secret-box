@@ -111,6 +111,7 @@ export function ProjectView({ project, globals = [] }: ProjectViewProps) {
   const { confirm, ConfirmDialog } = useConfirm();
 
   const [decryptedGlobals, setDecryptedGlobals] = useState<DecryptedGlobal[]>([]);
+  const [globalsDecryptError, setGlobalsDecryptError] = useState(false);
 
   // Use custom hooks for toggle sets and clipboard
   const visibleValues = useToggleSet<string>();
@@ -186,7 +187,7 @@ export function ProjectView({ project, globals = [] }: ProjectViewProps) {
       })
     )
       .then(setDecryptedGlobals)
-      .catch(() => {});
+      .catch(() => setGlobalsDecryptError(true));
   }, [cryptoKey, globals]);
 
   async function handleDeleteProject() {
@@ -545,7 +546,11 @@ export function ProjectView({ project, globals = [] }: ProjectViewProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {decryptedGlobals.length === 0 ? (
+            {globalsDecryptError ? (
+              <p className="py-4 text-center text-sm text-destructive">
+                Failed to decrypt global variables. Make sure your vault is unlocked.
+              </p>
+            ) : decryptedGlobals.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 <p className="mt-2 text-sm text-muted-foreground">Decrypting globals...</p>

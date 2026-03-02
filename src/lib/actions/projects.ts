@@ -60,17 +60,21 @@ export async function createProject(data: {
 
 export async function updateProject(
   projectId: string,
-  data: { name?: string; path?: string }
+  data: { name?: string }
 ) {
   try {
     const userId = await requireAuth();
     await requireProjectOwnership(projectId, userId);
 
+    const trimmedName = data.name?.trim();
+    if (trimmedName !== undefined && (trimmedName.length === 0 || trimmedName.length > 50)) {
+      throw new Error("Project name must be between 1 and 50 characters");
+    }
+
     const project = await db.project.update({
       where: { id: projectId },
       data: {
-        name: data.name,
-        path: data.path,
+        name: trimmedName,
       },
     });
 
@@ -105,12 +109,16 @@ export async function deleteProject(projectId: string) {
 }
 
 export async function getProjects() {
-  const userId = await requireAuth();
-  return db.project.findMany({
-    where: { userId },
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
+  try {
+    const userId = await requireAuth();
+    return db.project.findMany({
+      where: { userId },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+  } catch {
+    return [];
+  }
 }
 
 export async function getProject(projectId: string) {
